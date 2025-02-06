@@ -1,0 +1,25 @@
+{
+  "name": "claramente/claramente.options",
+  "description": "Bitrix - Options",
+  "type": "bitrix-module",
+  "license": "MIT",
+  "keywords": [
+    "bitrix",
+    "models",
+    "bitrix options",
+    "bitrix highload",
+    "bitrix iblock",
+    "bitrix опции",
+    "bitrix параметры",
+    "bitrix настройки"
+  ],
+  "authors": [
+    {
+      "name": "Claramente",
+      "email": "info@claramente.ru"
+    }
+  ],
+  "require": {
+    "php": ">=8.0"
+  }
+}
