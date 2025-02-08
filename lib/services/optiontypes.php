@@ -11,32 +11,64 @@ use Claramente\Options\Types\AbstractOption;
 final class OptionTypes
 {
     /**
+     * Стандартные типы данных
+     * @var array|array[]
+     */
+    public static array $defaultTypes = [
+        'string' => 'Claramente\Options\Types\StringOption',
+        'strings' => 'Claramente\Options\Types\StringsOption',
+        'bool' => 'Claramente\Options\Types\BoolOption',
+        'date' => 'Claramente\Options\Types\DateOption',
+        'select' => 'Claramente\Options\Types\SelectOption',
+        'text' => 'Claramente\Options\Types\TextOption',
+        'file' => 'Claramente\Options\Types\FileOption'
+    ];
+
+    /**
      * Типы к классам
      * @var AbstractOption[]
      */
     private static array $typeClasses = [];
 
     /**
-     * Свойства
-     * @var array
-     */
-    private static array $types = [];
-
-    /**
-     * Получить все возможные типы свойств
+     * Получить все возможные типы свойств.
+     * Код => Class
      * @return string[]
      */
     public static function getTypes(): array
     {
-        if (! self::$types) {
-            foreach (get_declared_classes() as $class) {
-                if (is_subclass_of($class, AbstractOption::class)) {
-                    self::$types[$class::getCode()] = $class::getName();
-                }
+        $types = [];
+        foreach (self::$defaultTypes as $code => $class) {
+            if (! class_exists($class)) {
+                continue;
+            }
+            $types[$code] = $class;
+        }
+        foreach (get_declared_classes() as $class) {
+            if (is_subclass_of($class, AbstractOption::class)) {
+                $types[$class::getCode()] = $class;
             }
         }
 
-        return self::$types;
+        return $types;
+    }
+
+    /**
+     * Получить все возможные типы свойств.
+     * Код => Имя
+     * @return string[]
+     */
+    public static function getTypeCodeNames(): array
+    {
+        $result = [];
+        foreach (self::getTypes() as $code => $class) {
+            /**
+             * @var AbstractOption $class
+             */
+            $result[$code] = $class::getName();
+        }
+
+        return $result;
     }
 
     /**
@@ -47,12 +79,9 @@ final class OptionTypes
     public static function getOptionTypeClass(string $code): ?AbstractOption
     {
         if (! isset(self::$typeClasses[$code])) {
-            foreach (get_declared_classes() as $class) {
-                if (is_subclass_of($class, AbstractOption::class) && $class::getCode() === $code) {
-                    self::$typeClasses[$code] = new $class;
-
-                    return self::$typeClasses[$code];
-                }
+            $types = self::getTypes();
+            if (array_key_exists($code, $types)) {
+                self::$typeClasses[$code] = new $types[$code];
             }
         }
 

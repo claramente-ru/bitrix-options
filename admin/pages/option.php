@@ -3,6 +3,7 @@
 use Bitrix\Main\Request;
 use Claramente\Options\Admin\AdminForm;
 use Claramente\Options\Entity\ClaramenteOptionsTable;
+use Claramente\Options\Services\MigrationService;
 use Claramente\Options\Services\OptionTypes;
 use Sprint\Migration\VersionManager;
 
@@ -18,6 +19,17 @@ if ($request->isPost()) {
 // Модуль миграций
 $migrationModuleEnabled = CModule::IncludeModule('sprint.migration');
 
+// Открытая опция
+$optionId = $request->get('ID');
+$option = null;
+$isNewOption = $optionId === null;
+if (! $isNewOption) {
+    $option = ClaramenteOptionsTable::getOptionById((int)$optionId);
+    if (! $option) {
+        CAdminMessage::ShowMessage('Опция не найдена');
+        return;
+    }
+}
 
 // Действие: Удаление опции
 if ($request->get('delete') === 'Y' && is_numeric($request->get('ID'))) {
@@ -27,30 +39,12 @@ if ($request->get('delete') === 'Y' && is_numeric($request->get('ID'))) {
 
 // Действие: Миграция опции
 if ($request->get('migrate') === 'Y' && is_numeric($request->get('ID'))) {
-    $moduleMigrate = new VersionManager();
-    $builder = $moduleMigrate->createBuilder(
-        'BlankBuilder',
-        [
-            'builder_name' => 'BlankBuilder',
-            'prefix' => 'test',
-            'description' => 'test',
-            'step_code' => 'migration_create'
-        ]
-    );
-
-    $builder->buildExecute();
-}
-
-// Редактируемая опция
-$optionId = $request->get('ID');
-$option = null;
-$isNewOption = $optionId === null;
-if (! $isNewOption) {
-    $option = ClaramenteOptionsTable::getOptionById((int)$optionId);
-    if (!$option) {
-        CAdminMessage::ShowMessage('Опция не найдена');
-        return;
+    $optionService = new MigrationService();
+    $optionMigrate = $optionService->createMigration((int)$request->get('ID'));
+    if (! $optionMigrate) {
+        CAdminMessage::ShowMessage('Ошибка создания миграции');
     }
+
 }
 
 // Страница редактирования
@@ -78,7 +72,7 @@ $tabControl->AddEditField('option[name]', '📝 Название', true, [], $op
 $tabControl->AddEditField('option[code]', '🆔 Код', true, [], $option?->code);
 $tabControl->AddEditField('option[sort]', '🔝️️ Сортировка', false, [], $option ? $option->sort : 100);
 $tabControl->AddDropDownField('option[tab_id]', '🗂️️ Вкладка', false, $form->getSelectTabs(), $option?->tabId);
-$tabControl->AddDropDownField('option[type]', '🛠️ Формат данных', false, OptionTypes::getTypes(), $option?->type);
+$tabControl->AddDropDownField('option[type]', '🛠️ Формат данных', false, OptionTypes::getTypeCodeNames(), $option?->type);
 $tabControl->AddDropDownField('option[site_id]', '🖥️ Сайт', false, $form->getSelectSites(), $option?->siteId);
 
 // Настройки типа данных
@@ -102,7 +96,6 @@ if (! $isNewOption) {
 </a>';
 }
 // Кнопка "Создать миграцию"
-// TODO: в разработке
 $buttonMigration = '';
 if ($migrationModuleEnabled) {
     $text = 'Создать миграцию в модуле sprint.migration? Значение опции будет перенесено вместе с миграцией';

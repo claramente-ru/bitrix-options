@@ -1,4 +1,0 @@
-<?php
-
-$MESS['CLAREMENTE_MODULE_OPTIONS_NAME'] = 'Claramente';
-$MESS['CLAREMENTE_MODULE_OPTIONS_DESCRIPTION'] = 'Модуль опций Claramente';
