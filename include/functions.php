@@ -9,15 +9,17 @@ if (! function_exists('cm_option')) {
      * @param string $code
      * @param string|null $siteId
      * @param mixed $default
+     * @param int $cacheTtl Кэширование
      * @return mixed
      */
     function cm_option(
         string  $code,
         ?string $siteId = null,
-        mixed   $default = null
+        mixed   $default = null,
+        int     $cacheTtl = 0,
     ): mixed
     {
-        $option = ClaramenteOptionsTable::getByCode($code, $siteId);
+        $option = ClaramenteOptionsTable::getByCode($code, $siteId, $cacheTtl);
 
         return $option?->getOptionType() ? $option->getOptionType()->getValue($option) : $default;
     }

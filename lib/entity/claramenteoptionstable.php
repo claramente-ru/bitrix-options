@@ -16,6 +16,24 @@ use Claramente\Options\Structures\Entity\OptionEntityStructure;
 final class ClaramenteOptionsTable extends DataManager
 {
     /**
+     * Кэширование данных для загрузки всех опций сразу для @see self::loadAllOptions()
+     * @var array
+     */
+    private static array $loadAllCacheCodes = [];
+
+    /**
+     * Кэширование данных для загрузки всех опций сразу для @see self::loadAllOptions()
+     * @var array
+     */
+    private static array $loadAllCacheIds = [];
+
+    /**
+     * Статус загрузки всех элементов для @see self::loadAllOptions()
+     * @var bool
+     */
+    private static bool $loadedAllOptions = false;
+
+    /**
      * Название таблицы
      * @return string
      */
@@ -72,9 +90,14 @@ final class ClaramenteOptionsTable extends DataManager
      * Получить опции по идентификатору вкладки
      * @param int $tabId
      * @param string|null $siteId
+     * @param int|null $cacheTtl Кэширование данных
      * @return OptionEntityStructure[]
      */
-    public static function getByTabId(int $tabId, ?string $siteId = null): array
+    public static function getByTabId(
+        int     $tabId,
+        ?string $siteId = null,
+        ?int    $cacheTtl = null
+    ): array
     {
         $options = [];
         $dbOptions = self::query()
@@ -82,9 +105,15 @@ final class ClaramenteOptionsTable extends DataManager
                 'TAB_ID' => $tabId,
                 'SITE_ID' => $siteId
             ])
-            ->setSelect(['*'])
-            ->fetchAll();
-        foreach ($dbOptions as $dbOption) {
+            ->setSelect(['*']);
+        // Кэширование данных
+        if (null !== $cacheTtl && defined('CLARAMENTE_OPTIONS_CACHE_TIME')) {
+            $cacheTtl = (int)CLARAMENTE_OPTIONS_CACHE_TIME;
+        }
+        if ($cacheTtl) {
+            $dbOptions->setCacheTtl($cacheTtl);
+        }
+        foreach ($dbOptions->fetchAll() as $dbOption) {
             $options[] = OptionEntityStructure::fromArray($dbOption);
         }
 
@@ -95,17 +124,44 @@ final class ClaramenteOptionsTable extends DataManager
      * Получить опцию по коду
      * @param string $code
      * @param string|null $siteId
+     * @param int|null $cacheTtl Кэширование данных
      * @return OptionEntityStructure|null
      */
-    public static function getByCode(string $code, ?string $siteId = null): ?OptionEntityStructure
+    public static function getByCode(
+        string  $code,
+        ?string $siteId = null,
+        ?int    $cacheTtl = null
+    ): ?OptionEntityStructure
     {
-        $option = self::query()
-            ->setFilter([
-                'CODE' => $code,
-                'SITE_ID' => $siteId
-            ])
-            ->setSelect(['*'])
-            ->fetch();
+        $option = null;
+        $optionIsFilled = false;
+        if (self::isEnabledLoadAll()) {
+            // Загрузим все элементы если ранее не были загружены
+            self::loadAllOptions();
+            $key = $code . $siteId ?: '';
+            if (array_key_exists($key, self::$loadAllCacheCodes)) {
+                $option = self::$loadAllCacheCodes[$key];
+                // Заполнили option, отметим это
+                $optionIsFilled = true;
+            }
+        }
+        // Если опция не заполнена кэшем, то подгрузим ее
+        if (! $optionIsFilled) {
+            $option = self::query()
+                ->setFilter([
+                    'CODE' => $code,
+                    'SITE_ID' => $siteId
+                ])
+                ->setSelect(['*']);
+            // Кэширование данных
+            if (null !== $cacheTtl && defined('CLARAMENTE_OPTIONS_CACHE_TIME')) {
+                $cacheTtl = (int)CLARAMENTE_OPTIONS_CACHE_TIME;
+            }
+            if ($cacheTtl) {
+                $option->setCacheTtl($cacheTtl);
+            }
+            $option = $option->fetch();
+        }
 
         return $option ? OptionEntityStructure::fromArray($option) : null;
     }
@@ -113,17 +169,72 @@ final class ClaramenteOptionsTable extends DataManager
     /**
      * Получить опцию по id
      * @param int $id
+     * @param int|null $cacheTtl Кэширование данных
      * @return OptionEntityStructure|null
      */
-    public static function getOptionById(int $id): ?OptionEntityStructure
+    public static function getOptionById(int $id, ?int $cacheTtl = null): ?OptionEntityStructure
     {
-        $option = self::query()
-            ->setFilter([
-                'ID' => $id
-            ])
-            ->setSelect(['*'])
-            ->fetch();
+        $option = null;
+        $optionIsFilled = false;
+        if (self::isEnabledLoadAll()) {
+            // Загрузим все элементы если ранее не были загружены
+            self::loadAllOptions();
+            if (array_key_exists($id, self::$loadAllCacheIds)) {
+                $option = self::$loadAllCacheIds[$id];
+                // Заполнили option, отметим это
+                $optionIsFilled = true;
+            }
+        }
+        // Если опция не заполнена кэшем, то подгрузим ее
+        if (! $optionIsFilled) {
+            $option = self::query()
+                ->setFilter([
+                    'ID' => $id
+                ])
+                ->setSelect(['*']);
+            // Кэширование данных
+            if (null !== $cacheTtl && defined('CLARAMENTE_OPTIONS_CACHE_TIME')) {
+                $cacheTtl = (int)CLARAMENTE_OPTIONS_CACHE_TIME;
+            }
+            if ($cacheTtl) {
+                $option->setCacheTtl($cacheTtl);
+            }
+            $option = $option->fetch();
+        }
 
         return $option ? OptionEntityStructure::fromArray($option) : null;
+    }
+
+    /**
+     * Включена загрузка всех элементов перед получением данных.
+     * Сокращает количество запросов при большом количестве вызове метода cm_option
+     * @return bool
+     */
+    private static function isEnabledLoadAll(): bool
+    {
+        return defined('CLARAMENTE_OPTIONS_LOAD_ALL') && boolval(CLARAMENTE_OPTIONS_LOAD_ALL);
+    }
+
+    /**
+     * Загрузка всех элементов в кэш
+     * @return void
+     */
+    private static function loadAllOptions(): void
+    {
+        // Если элементы загружали ранее, нет смысла подгружать их снова
+        if (self::$loadedAllOptions) {
+            return;
+        }
+        // Загрузим все элементы
+        $options = self::query()
+            ->setSelect(['*']);
+        foreach ($options->fetchAll() as $option) {
+            $key = $option['CODE'] . $option['SITE_ID'] ?: '';
+            self::$loadAllCacheCodes[$key] = $option;
+            self::$loadAllCacheIds[(int)$option['ID']] = $option;
+        }
+
+        // Отметим статус загрузки всех элементов
+        self::$loadedAllOptions = true;
     }
 }
