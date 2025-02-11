@@ -61,7 +61,7 @@ class <?php echo $version ?> extends <?php echo $extendClass ?>
             $addTab = ClaramenteOptionTabsTable::add([
                 'NAME' => $this->tabName,
                 'CODE' => $this->tabCode,
-                'SORT' => $this->tabCode
+                'SORT' => $this->tabSort
             ]);
             if (! $addTab->isSuccess()) {
                 throw new MigrationException(
