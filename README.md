@@ -13,7 +13,7 @@
     }
   },
   "require": {
-    "claramente-ru/bitrix-options": "dev-master"
+    "claramente/claramente.options": "dev-master"
   }
 }
 ```
