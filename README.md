@@ -67,7 +67,7 @@
 Для включения глобального кэширования следует определить глобальную константу со временем кэша:
 
 ```php
-const CLARAMENTE_OPTIONS_CACHE_TIME = 0;
+const CLARAMENTE_OPTIONS_CACHE_TIME = 3600;
 ```
 
 Обратите внимание, что константа должна быть объявлена **до** вызова метода `cm_option`.
@@ -78,7 +78,7 @@ const CLARAMENTE_OPTIONS_CACHE_TIME = 0;
 Для активации предварительной загрузки необходимо установить глобальную константу:
 
 ```php
-const CLARAMENTE_OPTIONS_LOAD_ALL = true;
+const CLARAMENTE_OPTIONS_PRELOADER = true;
 ```
 
 Обратите внимание, что константа должна быть объявлена **до** вызова метода `cm_option`.

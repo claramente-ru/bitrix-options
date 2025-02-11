@@ -117,7 +117,7 @@ final class MigrationService
      */
     protected function stringClear(?string $value): ?string
     {
-        if (!$value) {
+        if (! $value) {
             return $value;
         }
 

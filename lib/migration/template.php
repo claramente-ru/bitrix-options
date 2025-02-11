@@ -63,7 +63,7 @@ class <?php echo $version ?> extends <?php echo $extendClass ?>
                 'CODE' => $this->tabCode,
                 'SORT' => $this->tabCode
             ]);
-            if (!$addTab->isSuccess()) {
+            if (! $addTab->isSuccess()) {
                 throw new MigrationException(
                     implode(',', $addTab->getErrorMessages())
                 );

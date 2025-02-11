@@ -92,7 +92,7 @@ foreach ((array)$request->getPost('options_del') as $optionId => $value) {
 foreach ($options as $optionId => $optionData) {
     // Заберем опцию по коду
     $option = ClaramenteOptionsTable::getOptionById((int)$optionId);
-    if (!$option) {
+    if (! $option) {
         CAdminMessage::ShowMessage(sprintf('Ошибка. Опция %d не найдена', $optionId));
         return;
     }

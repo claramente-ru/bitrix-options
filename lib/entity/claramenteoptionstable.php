@@ -16,22 +16,22 @@ use Claramente\Options\Structures\Entity\OptionEntityStructure;
 final class ClaramenteOptionsTable extends DataManager
 {
     /**
-     * Кэширование данных для загрузки всех опций сразу для @see self::loadAllOptions()
+     * Кэширование данных для загрузки всех опций сразу для @see self::preloaderOptions()
      * @var array
      */
-    private static array $loadAllCacheCodes = [];
+    private static array $preloaderCacheCodes = [];
 
     /**
-     * Кэширование данных для загрузки всех опций сразу для @see self::loadAllOptions()
+     * Кэширование данных для загрузки всех опций сразу для @see self::preloaderOptions()
      * @var array
      */
-    private static array $loadAllCacheIds = [];
+    private static array $preloaderCacheIds = [];
 
     /**
-     * Статус загрузки всех элементов для @see self::loadAllOptions()
+     * Статус загрузки всех элементов для @see self::preloaderOptions()
      * @var bool
      */
-    private static bool $loadedAllOptions = false;
+    private static bool $preloaderOptions = false;
 
     /**
      * Название таблицы
@@ -135,12 +135,12 @@ final class ClaramenteOptionsTable extends DataManager
     {
         $option = null;
         $optionIsFilled = false;
-        if (self::isEnabledLoadAll()) {
+        if (self::isEnabledPreloader()) {
             // Загрузим все элементы если ранее не были загружены
-            self::loadAllOptions();
+            self::preloaderOptions();
             $key = $code . $siteId ?: '';
-            if (array_key_exists($key, self::$loadAllCacheCodes)) {
-                $option = self::$loadAllCacheCodes[$key];
+            if (array_key_exists($key, self::$preloaderCacheCodes)) {
+                $option = self::$preloaderCacheCodes[$key];
                 // Заполнили option, отметим это
                 $optionIsFilled = true;
             }
@@ -176,11 +176,11 @@ final class ClaramenteOptionsTable extends DataManager
     {
         $option = null;
         $optionIsFilled = false;
-        if (self::isEnabledLoadAll()) {
+        if (self::isEnabledPreloader()) {
             // Загрузим все элементы если ранее не были загружены
-            self::loadAllOptions();
-            if (array_key_exists($id, self::$loadAllCacheIds)) {
-                $option = self::$loadAllCacheIds[$id];
+            self::preloaderOptions();
+            if (array_key_exists($id, self::$preloaderCacheIds)) {
+                $option = self::$preloaderCacheIds[$id];
                 // Заполнили option, отметим это
                 $optionIsFilled = true;
             }
@@ -210,19 +210,19 @@ final class ClaramenteOptionsTable extends DataManager
      * Сокращает количество запросов при большом количестве вызове метода cm_option
      * @return bool
      */
-    private static function isEnabledLoadAll(): bool
+    private static function isEnabledPreloader(): bool
     {
-        return defined('CLARAMENTE_OPTIONS_LOAD_ALL') && boolval(CLARAMENTE_OPTIONS_LOAD_ALL);
+        return defined('CLARAMENTE_OPTIONS_PRELOADER') && boolval(CLARAMENTE_OPTIONS_PRELOADER);
     }
 
     /**
      * Загрузка всех элементов в кэш
      * @return void
      */
-    private static function loadAllOptions(): void
+    private static function preloaderOptions(): void
     {
         // Если элементы загружали ранее, нет смысла подгружать их снова
-        if (self::$loadedAllOptions) {
+        if (self::$preloaderOptions) {
             return;
         }
         // Загрузим все элементы
@@ -230,11 +230,11 @@ final class ClaramenteOptionsTable extends DataManager
             ->setSelect(['*']);
         foreach ($options->fetchAll() as $option) {
             $key = $option['CODE'] . $option['SITE_ID'] ?: '';
-            self::$loadAllCacheCodes[$key] = $option;
-            self::$loadAllCacheIds[(int)$option['ID']] = $option;
+            self::$preloaderCacheCodes[$key] = $option;
+            self::$preloaderCacheIds[(int)$option['ID']] = $option;
         }
 
         // Отметим статус загрузки всех элементов
-        self::$loadedAllOptions = true;
+        self::$preloaderOptions = true;
     }
 }
