@@ -38,9 +38,9 @@ foreach ($form->getFormTabs() as $formTab) {
             // Форма редактирования опции
             $optionId = sprintf('options[%d]', $option->id);
             $optionType->getFormFieldValue(
-                    $optionId,
-                    $tabControl,
-                    $option
+                $optionId,
+                $tabControl,
+                $option
             );
         }
     }
@@ -69,6 +69,30 @@ foreach ($form->getFormTabs() as $formTab) {
         $tabControl->AddEditField('tab_add[name]', '📝 Заголовок', false, [], '');
         $tabControl->AddEditField('tab_add[code]', '🔤 Символьный код', false, [], '');
         $tabControl->AddEditField('tab_add[sort]', '🔝️ Сортировка', false, [], 100);
+    }
+
+    // Вкладка о нас
+    if ('about' === $formTab['DIV']) {
+        $tabControl->AddViewField(
+            'about-license',
+            '⚖️ Лицензия',
+            '<a target="_blank" href="https://github.com/claramente-ru/bitrix-options/blob/master/LICENSE">MIT</a>'
+        );
+        $tabControl->AddViewField(
+            'about-git',
+            '𝗚𝐈𝗧️ GitHub',
+            '<a target="_blank" href="https://github.com/claramente-ru/bitrix-options">https://github.com/claramente-ru/bitrix-options</a>'
+        );
+        $tabControl->AddViewField(
+            'about-packagist',
+            '🐘️ Packagist',
+            '<a target="_blank" href="https://packagist.org/packages/claramente/claramente.options">https://packagist.org/packages/claramente/claramente.options</a>'
+        );
+        $tabControl->AddViewField(
+            'about-developer',
+            '⚒️ Разработчик',
+            '<a target="_blank" href="https://claramente.ru">© Светлые головы</a>'
+        );
     }
 }
 

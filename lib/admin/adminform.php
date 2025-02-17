@@ -117,6 +117,8 @@ final class AdminForm
             $tabs[] = $this->collectTab('💾 Опции', 'options');
             // Tab для настроек tabs
             $tabs[] = $this->collectTab('📑 Вкладки', 'tabs');
+            // Вкладка о нас
+            $tabs[] = $this->collectTab(name: 'ℹ️ О модуле', div: 'about', sort: 999_999_999);
         }
 
         return $tabs;

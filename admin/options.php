@@ -19,12 +19,16 @@ if (! Loader::includeModule('claramente.options')) {
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_admin_after.php';
 
-// Страница редактирований опции
-if ($request->get('page') === 'option') {
-    require_once 'pages/option.php';
-} else {
+// Страница вкладки
+$pagePath = match ($request->get('page')) {
+    // Страница редактирования опции
+    'option' => 'pages/option.php',
+    'about' => 'pages/about.php',
     // Главная страница
-    require_once 'pages/main.php';
-}
+    default => 'pages/main.php',
+};
+
+require_once $pagePath;
+
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/epilog_admin.php';
