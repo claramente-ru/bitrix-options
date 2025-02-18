@@ -7,6 +7,7 @@ use Claramente\Options\Types\StringOption;
 
 /**
  * @var Request $request
+ * @var CUser $USER
  */
 
 // Сохранение формы
@@ -96,8 +97,11 @@ foreach ($form->getFormTabs() as $formTab) {
     }
 }
 
-// Кнопка добавить новый параметр
-$buttonAddNewParameter = '<a href="/bitrix/admin/claramente_options.php?lang=' . LANG . '&page=option"><input type="button" value="Добавить параметр" title="Добавить новый параметр" class="adm-btn-add"></a>';
+// Кнопка добавить новый параметр (для администраторов)
+$buttonAddNewParameter = '';
+if ($USER->IsAdmin()) {
+    $buttonAddNewParameter = '<a href="/bitrix/admin/claramente_options.php?lang=' . LANG . '&page=option"><input type="button" value="Добавить параметр" title="Добавить новый параметр" class="adm-btn-add"></a>';
+}
 $tabControl->Buttons(
     [
         'disabled' => false,
@@ -109,8 +113,10 @@ $tabControl->Buttons(
 $tabControl->Show();
 include_once __DIR__ . '/../include/info.php';
 ?>
+<?php if ($USER->IsAdmin()) { ?>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
+        // Редактирование опций доступно только администраторам
         document.querySelectorAll("tr[id^='tr_options']").forEach(function (input) {
             if (input.getAttribute("type") === "hidden") {
                 return;
@@ -127,3 +133,4 @@ include_once __DIR__ . '/../include/info.php';
         });
     });
 </script>
+<?php } ?>

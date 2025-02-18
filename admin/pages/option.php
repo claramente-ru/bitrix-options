@@ -9,7 +9,14 @@ use Sprint\Migration\VersionManager;
 
 /**
  * @var Request $request
+ * @var CUser $USER
  */
+
+// Страница доступна только администраторам
+if (! $USER->IsAdmin()) {
+    CAdminMessage::ShowMessage('Страница доступна только администраторам');
+    return;
+}
 
 // Сохранение опции
 if ($request->isPost()) {
