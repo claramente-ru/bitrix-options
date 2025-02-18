@@ -30,6 +30,11 @@ foreach ($form->getFormTabs() as $formTab) {
     if ($formTab['ID'] || 'options' === $formTab['DIV']) {
         // Получить все опции вкладки
         foreach ($form->getTabOptions($formTab['ID']) as $option) {
+            // Скрываем опции доступные только администраторам
+            if ($option->isAdminOnly && ! $USER->IsAdmin()) {
+                continue;
+            }
+
             // Свойство опции
             $optionType = $option->getOptionType();
             if (null === $optionType) {

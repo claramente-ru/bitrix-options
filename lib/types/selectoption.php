@@ -55,7 +55,7 @@ class SelectOption extends AbstractOption
 
         $form->AddDropDownField(
             id: $this->getPostOptionId($postName, $option),
-            content: trim($option->name . ' ' . $option->siteId),
+            content: $this->getOptionLabel($option),
             required: false,
             arSelect: $values,
             value: $option->value

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Claramente\Options\Entity;
 
 use Bitrix\Main\Entity\DataManager;
+use Bitrix\Main\ORM\Fields\BooleanField;
 use Bitrix\Main\ORM\Fields\DatetimeField;
 use Bitrix\Main\ORM\Fields\IntegerField;
 use Bitrix\Main\ORM\Fields\StringField;
@@ -80,6 +81,9 @@ final class ClaramenteOptionsTable extends DataManager
             new StringField('SITE_ID', [
                 'nullable' => true,
                 'size' => 12
+            ]),
+            new BooleanField('IS_ADMIN_ONLY', [
+                'default' => 0,
             ]),
             new DatetimeField('CREATED_AT'),
             new DatetimeField('UPDATED_AT')

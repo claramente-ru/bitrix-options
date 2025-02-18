@@ -41,7 +41,7 @@ class TextOption extends AbstractOption
     {
         $form->AddTextField(
             id: $this->getPostOptionId($postName, $option),
-            label: trim($option->name . ' ' . $option->siteId),
+            label: $this->getOptionLabel($option),
             value: $option->value,
             arParams: [
                 'cols' => 60,

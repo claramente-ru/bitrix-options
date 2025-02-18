@@ -96,6 +96,11 @@ foreach ($options as $optionId => $optionData) {
         CAdminMessage::ShowMessage(sprintf('Ошибка. Опция %d не найдена', $optionId));
         return;
     }
+    // Опция доступна только администраторам
+    if ($option->isAdminOnly && ! $USER->IsAdmin()) {
+        CAdminMessage::ShowMessage('Опция доступна только администраторам');
+        return;
+    }
     // Преобразуем value перед сохранением
     $optionType = $option->getOptionType();
     if (null === $optionType) {

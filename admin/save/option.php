@@ -40,7 +40,6 @@ if (null === $optionType) {
     CAdminMessage::ShowMessage('Ошибка. Свойство опции не найдено');
     return;
 }
-
 $data = [
     'NAME' => $option['name'] ?? 'Без имени',
     'CODE' => $option['code'],
@@ -48,7 +47,9 @@ $data = [
     'SITE_ID' => ! empty($option['site_id']) ? $option['site_id'] : null,
     'SORT' => $option['sort'] ?? 100,
     'TAB_ID' => isset($option['tab_id']) && intval($option['tab_id']) > 0 ? $option['tab_id'] : null,
+    'IS_ADMIN_ONLY' => isset($option['is_admin_only']) && $option['is_admin_only'] === 'Y',
 ];
+
 // Редактирование опции
 if (! $isNewOption) {
     $save = ClaramenteOptionsTable::update($currentOption->id, $data);

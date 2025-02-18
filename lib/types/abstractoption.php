@@ -151,7 +151,7 @@ abstract class AbstractOption
     protected function getFieldHeader(OptionEntityStructure $option): string
     {
         return '<tr id="tr_options[' . $option->id . '][value]">
-    <td class="adm-detail-content-cell-l">' . $option->name . '</td>
+    <td class="adm-detail-content-cell-l">' . $this->getOptionLabel($option) . '</td>
     <td class="adm-detail-content-cell-r">';
     }
 
@@ -162,5 +162,23 @@ abstract class AbstractOption
     protected function getFieldFooter(): string
     {
         return '</td></tr>';
+    }
+
+    /**
+     * Получить label для опции
+     * @param OptionEntityStructure $option
+     * @return string
+     */
+    protected function getOptionLabel(OptionEntityStructure $option): string
+    {
+        $label = $option->name;
+
+        $protected = '';
+        if ($option->isAdminOnly) {
+            $protected .= ' 🔒';
+        }
+        $siteId = $option->siteId ? sprintf(' (%s)', $option->siteId) : '';
+
+        return trim($label . $siteId . $protected);
     }
 }

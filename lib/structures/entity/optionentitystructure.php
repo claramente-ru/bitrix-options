@@ -23,6 +23,7 @@ final class OptionEntityStructure
      * @param int $sort
      * @param int|null $tabId
      * @param string|null $siteId
+     * @param bool $isAdminOnly
      * @param DateTime $createdAt
      * @param DateTime $updatedAt
      */
@@ -36,6 +37,7 @@ final class OptionEntityStructure
         public int      $sort,
         public ?int     $tabId,
         public ?string  $siteId,
+        public bool     $isAdminOnly,
         public DateTime $createdAt,
         public DateTime $updatedAt,
     )
@@ -59,6 +61,7 @@ final class OptionEntityStructure
             sort: intval($option['SORT']),
             tabId: is_numeric($option['TAB_ID']) ? intval($option['TAB_ID']) : null,
             siteId: $option['SITE_ID'],
+            isAdminOnly: boolval($option['IS_ADMIN_ONLY']),
             createdAt: $option['CREATED_AT'],
             updatedAt: $option['UPDATED_AT']
         );

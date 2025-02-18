@@ -89,7 +89,7 @@ class FileOption extends AbstractOption
     {
         $form->AddFileField(
             id: $this->getPostOptionId($postName, $option),
-            label: trim($option->name . ' ' . $option->siteId),
+            label: $this->getOptionLabel($option),
             value: $option->value
         );
     }

@@ -52,7 +52,7 @@ class BoolOption extends AbstractOption
     {
         $form->AddCheckBoxField(
             id: $this->getPostOptionId($postName, $option),
-            content: trim($option->name . ' ' . $option->siteId),
+            content: $this->getOptionLabel($option),
             required: false,
             value: ['Y', 'N'],
             checked: $option->value === 'Y'

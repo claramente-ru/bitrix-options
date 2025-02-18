@@ -81,6 +81,7 @@ $tabControl->AddEditField('option[sort]', '🔝️️ Сортировка', fal
 $tabControl->AddDropDownField('option[tab_id]', '🗂️️ Вкладка', false, $form->getSelectTabs(), $option?->tabId);
 $tabControl->AddDropDownField('option[type]', '🛠️ Формат данных', false, OptionTypes::getTypeCodeNames(), $option?->type);
 $tabControl->AddDropDownField('option[site_id]', '🖥️ Сайт', false, $form->getSelectSites(), $option?->siteId);
+$tabControl->AddCheckBoxField('option[is_admin_only]', '🔒 Доступен только администраторам', false, ['Y', 'N'], $option?->isAdminOnly);
 
 // Настройки типа данных
 if (! $isNewOption) {
