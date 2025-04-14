@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Claramente\Options\Types;
 
 use Bitrix\Main\HttpRequest;
+use Claramente\Options\Helpers\SiteHelper;
 use Claramente\Options\Structures\Entity\OptionEntityStructure;
 use CAdminForm;
 
@@ -172,12 +173,21 @@ abstract class AbstractOption
     protected function getOptionLabel(OptionEntityStructure $option): string
     {
         $label = $option->name;
-
+        // Только для администраторов
         $protected = '';
         if ($option->isAdminOnly) {
             $protected .= ' 🔒';
         }
-        $siteId = $option->siteId ? sprintf(' (%s)', $option->siteId) : '';
+        // Название сайта
+        $siteName = $option->siteId;
+        if ($option->siteId) {
+            $siteName = sprintf(
+                '%s - %s',
+                $option->siteId,
+                preg_replace('/[)(]/', '', SiteHelper::getSiteName($option->siteId))
+            );
+        }
+        $siteId = $option->siteId ? sprintf(' (%s)', $siteName) : '';
 
         return trim($label . $siteId . $protected);
     }
