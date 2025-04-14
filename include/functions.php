@@ -76,3 +76,22 @@ if (! function_exists('cm_option_filled')) {
         return null !== $option && ! empty($option->value);
     }
 }
+
+if (! function_exists('cm_option_delete')) {
+    /**
+     * Удаление опции
+     * @param string $code
+     * @param string|null $siteId
+     * @return bool
+     */
+    function cm_option_delete(string $code, ?string $siteId = null): bool
+    {
+        $option = ClaramenteOptionsTable::getByCode($code, $siteId);
+        if (! $option) {
+            return false;
+        }
+        ClaramenteOptionsTable::delete($option->id);
+        return true;
+    }
+}
+

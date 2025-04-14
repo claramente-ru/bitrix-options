@@ -51,7 +51,6 @@ if ($request->get('migrate') === 'Y' && is_numeric($request->get('ID'))) {
     if (! $optionMigrate) {
         CAdminMessage::ShowMessage('Ошибка создания миграции');
     }
-
 }
 
 // Страница редактирования

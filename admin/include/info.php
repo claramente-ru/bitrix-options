@@ -5,6 +5,7 @@
         <div><strong>Установка нового значения опции:</strong> cm_option_set(code, site_id, value)</div>
         <div><strong>Проверка существования опции:</strong> cm_option_exists(code, site_id)</div>
         <div><strong>Проверка заполнения опции:</strong> cm_option_filled(code, site_id)</div>
+        <div><strong>Удаление опции:</strong> cm_option_delete(code, site_id)</div>
     </div>
 </div>
 
