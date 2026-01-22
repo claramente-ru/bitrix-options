@@ -107,7 +107,8 @@ final class MigrationService
             'OPTION_SITE_ID' => $this->stringClear($option['SITE_ID']),
             'OPTION_VALUE' => $this->stringClear($option['VALUE']),
             'OPTION_SETTINGS' => $this->stringClear($option['SETTINGS']),
-            'OPTION_SORT' => $option['SORT']
+            'OPTION_SORT' => $option['SORT'],
+            'OPTION_SINGLE_VALUE_FOR_ALL_LANG' => (bool)$option['SINGLE_VALUE_FOR_ALL_LANG'] === true ? 'true' : 'false',
         ];
     }
 

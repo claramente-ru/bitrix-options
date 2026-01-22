@@ -63,6 +63,25 @@ class SelectOption extends AbstractOption
     }
 
     /**
+     * НЕ ПОДДЕРЖИВАЕТСЯ!
+     * Множественный вывод свойства в административном разделе
+     * Значение опции задается для языка
+     * @param  string  $postName
+     * @param  CAdminForm  $form
+     * @param  OptionEntityStructure  $option
+     * @return void
+     */
+    public function getFormFieldMultipleValue(
+        string                $postName,
+        CAdminForm            &$form,
+        OptionEntityStructure $option
+    ): void
+    {
+        // Вывод информации о том, что тип данных не поддерживает работу с языками
+       parent::showTypeNotSupportedForLangs($postName, $form, $option);
+    }
+
+    /**
      * Обновление дополнительных настроек
      * @param HttpRequest $request
      * @param OptionEntityStructure $option

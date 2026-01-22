@@ -40,6 +40,7 @@ if (null === $optionType) {
     CAdminMessage::ShowMessage('Ошибка. Свойство опции не найдено');
     return;
 }
+$forAllLangNewValue = isset($option['single_value_for_all_lang']) && $option['single_value_for_all_lang'] === 'Y';
 $data = [
     'NAME' => $option['name'] ?? 'Без имени',
     'CODE' => $option['code'],
@@ -48,6 +49,7 @@ $data = [
     'SORT' => $option['sort'] ?? 100,
     'TAB_ID' => isset($option['tab_id']) && intval($option['tab_id']) > 0 ? $option['tab_id'] : null,
     'IS_ADMIN_ONLY' => isset($option['is_admin_only']) && $option['is_admin_only'] === 'Y',
+    'SINGLE_VALUE_FOR_ALL_LANG' => $forAllLangNewValue,
 ];
 
 // Редактирование опции
@@ -63,17 +65,35 @@ if (! $save->isSuccess()) {
     return;
 }
 
-// Обновим дополнительные настройки типа данных
+// Добавим в данные для обновления дополнительные настройки типа данных
+$toUpdate['settings'] =  $optionType->beforeSaveSettings($request, ClaramenteOptionsTable::getOptionById($save->getId()));
+
+// Если есть данные и поменялся тип хранения с единственного на множественное (SINGLE_VALUE_FOR_ALL_LANG = N) или обратно, то
+// необходимо изменить представление данных в базе с единичного значения на json или наоборот
+if ($currentOption->value && $currentOption->singleValueForAllLang !== $forAllLangNewValue) {
+    if ($forAllLangNewValue) {
+        $value = unserialize($currentOption->value, ['allowed_classes' => false]);
+        if (is_array($value) && isset($value[0]['value'])) {
+            $toUpdate['value'] = $value[0]['value'];
+        }
+    } else {
+        $toUpdate['value'] = serialize([
+            [
+                'value' => $currentOption->value,
+                'lang'  => LANG
+            ]
+        ]);
+    }
+}
+
 ClaramenteOptionsTable::update(
     $save->getId(),
-    [
-        'settings' => $optionType->beforeSaveSettings($request, ClaramenteOptionsTable::getOptionById($save->getId()))
-    ]
+    $toUpdate
 );
 
 // Редирект относительно нажатой кнопки
 if ($request->getPost('apply')) {
-   LocalRedirect('/bitrix/admin/claramente_options.php?lang=' . LANG . '&page=option&ID=' . $save->getId());
+    LocalRedirect('/bitrix/admin/claramente_options.php?lang=' . LANG . '&page=option&ID=' . $save->getId());
 } else {
     // Редирект на страницу опций
     LocalRedirect('/bitrix/admin/claramente_options.php?lang=' . LANG);

@@ -39,6 +39,7 @@ class <?php echo $version ?> extends <?php echo $extendClass ?>
     protected ?string $optionValue = '<?php echo $params['OPTION_VALUE'] ?>';
     protected ?string $optionSettings = '<?php echo $params['OPTION_SETTINGS'] ?>';
     protected int $optionSort = <?php echo $params['OPTION_SORT'] ?? 100 ?>;
+    protected bool $optionSingleValueForAllLang = <?php echo $params['OPTION_SINGLE_VALUE_FOR_ALL_LANG'] ?>;
 
      public function __construct()
     {
@@ -79,6 +80,7 @@ class <?php echo $version ?> extends <?php echo $extendClass ?>
             'SITE_ID' => $this->optionSiteId,
             'VALUE' => $this->optionValue,
             'SETTINGS' => $this->optionSettings,
+            'SINGLE_VALUE_FOR_ALL_LANG' => $this->optionSingleValueForAllLang,
             'TYPE' => $this->optionType,
         ];
         if ($tab) {

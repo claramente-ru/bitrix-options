@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace Claramente\Options\Types;
 
 use Bitrix\Main\HttpRequest;
+use Bitrix\Main\Localization\LanguageTable;
+use Claramente\Options\Helpers\LangHelper;
 use Claramente\Options\Helpers\SiteHelper;
 use Claramente\Options\Structures\Entity\OptionEntityStructure;
 use CAdminForm;
@@ -36,6 +38,54 @@ abstract class AbstractOption
     }
 
     /**
+     * Преобразование множественного value из БД
+     * @param OptionEntityStructure $option
+     * @return array
+     */
+    public function getValuesForLangs(OptionEntityStructure $option): array
+    {
+        $value = null;
+
+        if ($option->value) {
+            $value = unserialize($option->value, ['allowed_classes' => false]);
+        }
+
+        if (is_array($value) && ! empty($value)) {
+            return $value;
+        }
+
+        // Если значение одно для всех языков, вернем его как множественное: одинаковое для каждого языка
+        return self::getSingleValueForAllLang($option);
+    }
+
+    /**
+     * Преобразование value для всех языков (при отмеченной опции - одно значение для всех языков)
+     * @param  OptionEntityStructure  $option
+     * @return array[]
+     */
+    public function getSingleValueForAllLang(OptionEntityStructure $option): array
+    {
+        // Возвращаем пустые данные, для языков не включена настройка - одно значение для всех языков
+        if (! $option->singleValueForAllLang) {
+            return [['value' => '', 'lang' => '']];
+        }
+
+        // Получаем список языков
+        $languages = LangHelper::getLanguages();
+        if (! empty($languages)) {
+            $langIds = array_keys($languages);
+
+            // Возвращаем одно значение для каждого языка
+            return array_map(function ($lang) use ($option) {
+                return ['value' => $option->getValue(), 'lang' => $lang];
+            }, $langIds);
+        }
+
+        // Возвращаем пустые данные, если список языков пуст
+        return [['value' => '', 'lang' => '']];
+    }
+
+    /**
      * Преобразование данных перед сохранением в БД
      * @param OptionEntityStructure $option
      * @param array|string|null $value
@@ -44,13 +94,35 @@ abstract class AbstractOption
     public function getValueBeforeSave(
         OptionEntityStructure $option,
         mixed                 $value,
+        bool                  $multiple = false,
     ): ?string
     {
         if (is_string($value) || is_numeric($value)) {
             return (string)$value;
         }
-        if (is_array($value)) {
+        if (is_array($value) && ! $multiple) {
             return $value['value'] ?? null;
+        }
+
+        if ($multiple) {
+            // Для множественных свойств (отдельное значение для каждого языка) сериализуем данные
+            $seenLangs = [];
+            foreach ($value as $key => $optionItem) {
+                // Удаляем пустые значения
+                if ($optionItem['value'] === '') {
+                    unset($value[$key]);
+                }
+                // Удаляем значение, если задано больше одного значения для языка
+                if (in_array($optionItem['lang'], $seenLangs)) {
+                    unset($value[$key]);
+                    continue;
+                }
+
+                $seenLangs[] = $optionItem['lang'];
+            }
+            $value = array_values($value);
+
+            return serialize($value);
         }
 
         return null;
@@ -75,6 +147,62 @@ abstract class AbstractOption
             required: false,
             value: $option->value
         );
+    }
+
+    /**
+     * Множественный вывод свойства в административном разделе
+     * Значение опции задается для языка
+     * @param string $postName
+     * @param CAdminForm $form
+     * @param OptionEntityStructure $option
+     * @return void
+     */
+    public function getFormFieldMultipleValue(
+        string                $postName,
+        CAdminForm            &$form,
+        OptionEntityStructure $option
+    ): void
+    {
+    }
+
+    /**
+     * Отрисовка строки таблицы значение + язык
+     * @param  string  $fieldId
+     * @param  string  $selectFieldId
+     * @param  array  $value
+     * @param  array  $params
+     * @return string
+     */
+    public function getOptionLangRow(
+        string $fieldId,
+        string $selectFieldId,
+        array $value,
+        array $params = []
+    ): string
+    {
+        return '';
+    }
+
+    /**
+     * Вывод информации о том, что тип данных не поддерживает работу с языками
+     * @param  string  $postName
+     * @param  CAdminForm  $form
+     * @param  OptionEntityStructure  $option
+     * @return void
+     */
+    public function showTypeNotSupportedForLangs(
+        string                $postName,
+        CAdminForm            &$form,
+        OptionEntityStructure $option,
+    ): void
+    {
+        // Начало блока ввода
+        $form->BeginCustomField($postName, $option->name);
+        // Шапка
+        echo $this->getFieldHeader($option);
+        echo '<div style="color: red">Не поддерживает несколько значений для разных языков.<br>Для корректной работы свойства отметьте опцию "Одно значение для всех языков"</div>';
+        // Конец блока ввода
+        $form->EndCustomField($postName);
     }
 
     /**
@@ -166,6 +294,18 @@ abstract class AbstractOption
     }
 
     /**
+     * Вывод кнопки добавления новых строк для добавления значений для языка
+     * @param  string  $tableId
+     * @param  string  $optionName
+     * @return string
+     */
+    protected function getAddButton(string $tableId, string $optionName): string
+    {
+        return '<input type="button" value="Добавить значение для языка" class="adm-btn-add" onclick="addOptionRow(\'' . $tableId . '\', \'' . $optionName . '\')">';
+
+    }
+
+    /**
      * Получить label для опции
      * @param OptionEntityStructure $option
      * @return string
@@ -178,6 +318,7 @@ abstract class AbstractOption
         if ($option->isAdminOnly) {
             $protected .= ' 🔒';
         }
+
         // Название сайта
         $siteName = $option->siteId;
         if ($option->siteId) {
@@ -190,5 +331,34 @@ abstract class AbstractOption
         $siteId = $option->siteId ? sprintf(' (%s)', $siteName) : '';
 
         return trim($label . $siteId . $protected);
+    }
+
+    protected function getDropdown(
+        string $selectName,
+        array $params = [],
+        array $options = [],
+        ?string $selectedValue = null
+    ): string {
+        $html = '<select name="' . $selectName . '"';
+
+        foreach ($params as $param) {
+            $html .= ' ' . $param;
+        }
+        $html .= '>';
+
+        foreach ($options as $key => $val) {
+            $html .= '<option value="' . htmlspecialcharsbx($key) . '"' . ($selectedValue == $key ? ' selected' : '') . '>'
+                . htmlspecialcharsex($val) . '</option>';
+        }
+        $html .= '</select>';
+
+        return $html;
+    }
+
+    protected function getLanguageDropdown(string $selectName, ?string $selectedValue = null): string
+    {
+        $languages = LangHelper::getLanguagesNames();
+
+        return $this->getDropdown(selectName: $selectName, options: $languages, selectedValue: $selectedValue);
     }
 }

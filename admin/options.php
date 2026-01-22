@@ -17,6 +17,19 @@ if (! Loader::includeModule('claramente.options')) {
     throw new Exception('Необходимо установить модуль claramente.options');
 }
 
+if ($request->isAjaxRequest() && $request->get('action')) {
+    // Обработка ajax-запроса
+    $ajaxPath = match ($request->get('action')) {
+        'addrow' => 'ajax/addrow.php',
+        default => '',
+    };
+
+    if (! empty($ajaxPath)) {
+        require_once $ajaxPath;
+    }
+    die();
+}
+
 require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_admin_after.php';
 
 // Страница вкладки

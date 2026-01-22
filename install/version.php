@@ -1,6 +1,6 @@
 <?php
 
 $version = [
-    'VERSION' => '1.0.1',
-    'VERSION_DATE' => '2025-02-18 14:00:00'
+    'VERSION' => '1.0.2',
+    'VERSION_DATE' => '2026-01-27 08:00:00'
 ];

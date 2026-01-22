@@ -80,6 +80,13 @@ $tabControl->AddEditField('option[sort]', '🔝️️ Сортировка', fal
 $tabControl->AddDropDownField('option[tab_id]', '🗂️️ Вкладка', false, $form->getSelectTabs(), $option?->tabId);
 $tabControl->AddDropDownField('option[type]', '🛠️ Формат данных', false, OptionTypes::getTypeCodeNames(), $option?->type);
 $tabControl->AddDropDownField('option[site_id]', '🖥️ Сайт', false, $form->getSelectSites(), $option?->siteId);
+$tabControl->AddCheckBoxField(
+    'option[single_value_for_all_lang]',
+    '🌐 Одно значение для всех языков (опция мультиязычности недоступна для типов "список" и "несколько строк")',
+    false,
+    ['Y', 'N'],
+    $option?->singleValueForAllLang
+);
 $tabControl->AddCheckBoxField('option[is_admin_only]', '🔒 Доступен только администраторам', false, ['Y', 'N'], $option?->isAdminOnly);
 
 // Настройки типа данных

@@ -79,16 +79,37 @@ foreach ((array)$request->getFile('options') as $fileOptionParameterName => $fil
      * @var array $fileOptionValues
      */
     foreach ($fileOptionValues as $fileOptionId => $fileOptionValue) {
-        if (! isset($options[$fileOptionId])) {
-            $options[$fileOptionId] = [];
+        if (is_array($fileOptionValue) && is_array(current($fileOptionValue))) {
+            // Для множественного значения, обрабатываем каждый элемент
+            foreach ($fileOptionValue as $index => $nestedValue) {
+                if (! isset($options[$fileOptionId][$index]['lang'])) {
+                    continue;
+                }
+                $options[$fileOptionId][$index]['value'][$fileOptionParameterName] =
+                    $nestedValue['value'] ?? null;
+            }
+        } else {
+            // Это одиночное значение
+            if (! isset($options[$fileOptionId])) {
+                $options[$fileOptionId] = [];
+            }
+            $options[$fileOptionId][$fileOptionParameterName] = $fileOptionValue['value'] ?? null;
         }
-        $options[$fileOptionId][$fileOptionParameterName] = $fileOptionValue['value'] ?? null;
     }
 }
+
 // Удаление файлов
 foreach ((array)$request->getPost('options_del') as $optionId => $value) {
-    $options[$optionId]['del'] = $value['value'] ?? '';
+    if (is_array($value) && is_array(current($value))) {
+        // Для множественного значения, обрабатываем каждый элемент
+        foreach ($value as $index => $nestedValue) {
+            $options[$optionId][$index]['value']['del'] = $nestedValue['value'] ?? null;
+        }
+    } else {
+        $options[$optionId]['del'] = $value['value'] ?? '';
+    }
 }
+
 foreach ($options as $optionId => $optionData) {
     // Заберем опцию по коду
     $option = ClaramenteOptionsTable::getOptionById((int)$optionId);
@@ -107,6 +128,7 @@ foreach ($options as $optionId => $optionData) {
         CAdminMessage::ShowMessage(sprintf('Ошибка. Свойство %s не найдено', $option->type));
         return;
     }
+
     // Сохраним изменения
     $option->setValue($optionData);
 }
