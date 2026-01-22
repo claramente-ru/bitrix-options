@@ -82,6 +82,9 @@ final class ClaramenteOptionsTable extends DataManager
                 'nullable' => true,
                 'size' => 12
             ]),
+            new BooleanField('SINGLE_VALUE_FOR_ALL_LANG', [
+                'default' => 1,
+            ]),
             new BooleanField('IS_ADMIN_ONLY', [
                 'default' => 0,
             ]),
@@ -134,7 +137,8 @@ final class ClaramenteOptionsTable extends DataManager
     public static function getByCode(
         string  $code,
         ?string $siteId = null,
-        ?int    $cacheTtl = null
+        ?int    $cacheTtl = null,
+        ?bool   $getForAllLanguages = false
     ): ?OptionEntityStructure
     {
         $option = null;
@@ -165,6 +169,10 @@ final class ClaramenteOptionsTable extends DataManager
                 $option->setCacheTtl($cacheTtl);
             }
             $option = $option->fetch();
+        }
+        if (isset($option['VALUE']) && ! $option['SINGLE_VALUE_FOR_ALL_LANG'] && ! $getForAllLanguages) {
+            $option['VALUE'] = unserialize($option['VALUE'], ['allowed_classes' => false]);
+            $option['VALUE'] = array_column($option['VALUE'], 'value', 'lang')[LANGUAGE_ID] ?? '';
         }
 
         return $option ? OptionEntityStructure::fromArray($option) : null;

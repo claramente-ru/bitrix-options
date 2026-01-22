@@ -23,6 +23,7 @@ final class OptionEntityStructure
      * @param int $sort
      * @param int|null $tabId
      * @param string|null $siteId
+     * @param bool  $singleValueForAllLang
      * @param bool $isAdminOnly
      * @param DateTime $createdAt
      * @param DateTime $updatedAt
@@ -37,6 +38,7 @@ final class OptionEntityStructure
         public int      $sort,
         public ?int     $tabId,
         public ?string  $siteId,
+        public bool     $singleValueForAllLang,
         public bool     $isAdminOnly,
         public DateTime $createdAt,
         public DateTime $updatedAt,
@@ -61,6 +63,7 @@ final class OptionEntityStructure
             sort: intval($option['SORT']),
             tabId: is_numeric($option['TAB_ID']) ? intval($option['TAB_ID']) : null,
             siteId: $option['SITE_ID'],
+            singleValueForAllLang: boolval($option['SINGLE_VALUE_FOR_ALL_LANG']),
             isAdminOnly: boolval($option['IS_ADMIN_ONLY']),
             createdAt: $option['CREATED_AT'],
             updatedAt: $option['UPDATED_AT']
@@ -79,7 +82,8 @@ final class OptionEntityStructure
             [
                 'value' => $this->getOptionType()->getValueBeforeSave(
                     option: $this,
-                    value: $value
+                    value: $value,
+                    multiple: ! $this->singleValueForAllLang
                 ),
             ]
         );
@@ -103,6 +107,15 @@ final class OptionEntityStructure
     public function getValue(): mixed
     {
         return $this->getOptionType()?->getValue($this);
+    }
+
+    /**
+     * Получить обработанный множественный value (одно значение для каждого языка) через свойство
+     * @return array
+     */
+    public function getValuesForLangs(): array
+    {
+        return $this->getOptionType()?->getValuesForLangs($this);
     }
 
     /**

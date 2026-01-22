@@ -5,7 +5,7 @@ use Claramente\Options\Entity\ClaramenteOptionsTable;
 if (! function_exists('cm_option')) {
 
     /**
-     * Получить опцию по коду
+     * Получить значение опции по коду для текущего языка
      * @param string $code
      * @param string|null $siteId
      * @param mixed $default
@@ -23,8 +23,28 @@ if (! function_exists('cm_option')) {
 
         return $option?->getOptionType() ? $option->getOptionType()->getValue($option) : $default;
     }
-
 }
+
+if (! function_exists('cm_option_all_lang')) {
+    /**
+     * Получить значение опции по коду для всех языков
+     * @param  string  $code
+     * @param  string|null  $siteId
+     * @param  int  $cacheTtl
+     * @return array
+     */
+    function cm_option_all_lang(
+        string  $code,
+        ?string $siteId = null,
+        int     $cacheTtl = 0,
+    ): array
+    {
+        $option = ClaramenteOptionsTable::getByCode($code, $siteId, $cacheTtl, getForAllLanguages: true);
+
+        return $option?->getOptionType() ? $option->getOptionType()->getValuesForLangs($option) : [];
+    }
+}
+
 if (! function_exists('cm_option_set')) {
     /**
      * Установка нового значения опции
@@ -51,7 +71,7 @@ if (! function_exists('cm_option_set')) {
 
 if (! function_exists('cm_option_exists')) {
     /**
-     * Проверка существования опции
+     * Проверка существования опции для текущего языка
      * @param string $code
      * @param string|null $siteId
      * @return bool
@@ -64,7 +84,7 @@ if (! function_exists('cm_option_exists')) {
 
 if (! function_exists('cm_option_filled')) {
     /**
-     * Проверка заполнения опции
+     * Проверка заполнения опции для текущего языка
      * @param string $code
      * @param string|null $siteId
      * @return bool

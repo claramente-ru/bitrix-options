@@ -43,11 +43,21 @@ foreach ($form->getFormTabs() as $formTab) {
 
             // Форма редактирования опции
             $optionId = sprintf('options[%d]', $option->id);
-            $optionType->getFormFieldValue(
-                $optionId,
-                $tabControl,
-                $option
-            );
+            if ($option->singleValueForAllLang) {
+                // Одно значение опции для всех языков
+                $optionType->getFormFieldValue(
+                    $optionId,
+                    $tabControl,
+                    $option
+                );
+            } else {
+                // Множественное значение опции для каждого языка
+                $optionType->getFormFieldMultipleValue(
+                    $optionId,
+                    $tabControl,
+                    $option
+                );
+            }
         }
     }
 
@@ -137,5 +147,84 @@ include_once __DIR__ . '/../include/info.php';
             tdName.append(editLink);
         });
     });
+
+    function addOptionRow(tableId, regexp) {
+        let table = document.getElementById(tableId)
+        if (! table) return;
+        const option_type = table.getAttribute('data-option-type')
+        if (! option_type) return;
+        const rowsCount = table.rows.length
+        let html = table.rows[rowsCount - 2].cells[0].innerHTML
+        const regExpName = new RegExp('(' + regexp + ')\\[(\\d*)\\]\\[(value|lang)\\]', 'gi');
+        html = html.match(regExpName)
+        if (! html.length) return;
+        const indexMatch = html[0].match(/\[(\d+)\]/gi);
+        const foundIndex = indexMatch[indexMatch.length - 1].replace(/\[|\]/g, "");
+        const name = html[0].replace(regExpName, '$1[' + (parseInt(foundIndex) + 1) + ']');
+        BX.ajax({
+            url: '/bitrix/admin/claramente_options.php?action=addrow',
+            method: 'POST',
+            dataType: 'json',
+            data: {
+                'sessid': BX.bitrix_sessid(),
+                'id': name,
+                'option_type': option_type,
+            },
+            onsuccess: function (response) {
+                var newHtml;
+                if (response.success && response.result) {
+                    const oRow = table.insertRow(rowsCount - 1);
+                    // Извлекаем скрипты для календаря
+                    if (response.result.includes('<script>') && option_type === 'date') {
+                        // Извлекаем скрипт
+                        const scriptMatch = response.result.match(/<script>([\s\S]*?)<\/script>/);
+                        if (scriptMatch) {
+                            const scriptContent = scriptMatch[1];
+
+                            // Удаляем скрипт из HTML
+                            newHtml = response.result.replace(/<script>[\s\S]*?<\/script>/, '');
+
+                            // Вставляем HTML в новую строку таблицы
+                            oRow.innerHTML = newHtml;
+
+                            // Выполняем скрипт с задержкой
+                            setTimeout(() => {
+                                executeOriginalScript(scriptContent);
+                            }, 0);
+                        } else {
+                            oRow.innerHTML = response.result;
+                        }
+                    } else {
+                        oRow.innerHTML = response.result;
+                    }
+                    setTimeout(() => {
+                        BX.adminFormTools.modifyFormElements(oRow);
+                    }, 0);
+                }
+            },
+            onerror: function (response) {
+                console.log(response.error)
+            }
+        })
+    }
+
+    function executeOriginalScript(scriptContent) {
+        // Создаем новый элемент script
+        const script = document.createElement('script');
+
+        // Вставляем код скрипта
+        script.textContent = scriptContent;
+
+        // Добавляем в head для выполнения
+        document.head.appendChild(script);
+
+        // Удаляем после выполнения
+        setTimeout(() => {
+            if (script.parentNode) {
+                document.head.removeChild(script);
+            }
+        }, 0);
+
+    }
 </script>
 <?php } ?>

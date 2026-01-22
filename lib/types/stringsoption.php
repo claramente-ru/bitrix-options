@@ -59,6 +59,7 @@ class StringsOption extends AbstractOption
     public function getValueBeforeSave(
         OptionEntityStructure $option,
         mixed                 $value,
+        bool                  $multiple = false,
     ): ?string
     {
        return is_array($value) ? serialize($value) : null;
@@ -99,6 +100,25 @@ class StringsOption extends AbstractOption
         // Подвал
         echo $this->getFieldFooter();
         $form->EndCustomField($postName);
+    }
+
+    /**
+     * НЕ ПОДДЕРЖИВАЕТСЯ!
+     * Множественный вывод свойства в административном разделе
+     * Значение опции задается для языка
+     * @param  string  $postName
+     * @param  CAdminForm  $form
+     * @param  OptionEntityStructure  $option
+     * @return void
+     */
+    public function getFormFieldMultipleValue(
+        string                $postName,
+        CAdminForm            &$form,
+        OptionEntityStructure $option
+    ): void
+    {
+        // Вывод информации о том, что тип данных не поддерживает работу с языками
+        parent::showTypeNotSupportedForLangs($postName, $form, $option);
     }
 
     /**

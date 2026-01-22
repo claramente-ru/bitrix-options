@@ -44,3 +44,18 @@ SET @update_1_0_1 = (
 PREPARE stmt FROM @update_1_0_1;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
+
+--  Обновление 1.0.2 от 2026-01-27
+SET @update_1_0_2 = (
+    SELECT IF(
+        (
+            SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_NAME = 'claramente_options' AND COLUMN_NAME = 'SINGLE_VALUE_FOR_ALL_LANG'
+        ) > 0,
+        'SELECT 1;',
+        'ALTER TABLE claramente_options ADD COLUMN SINGLE_VALUE_FOR_ALL_LANG TINYINT(1) NOT NULL DEFAULT 1;'
+    )
+);
+PREPARE stmt_1_0_2 FROM @update_1_0_2;
+EXECUTE stmt_1_0_2;
+DEALLOCATE PREPARE stmt_1_0_2;
