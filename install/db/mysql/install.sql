@@ -36,7 +36,7 @@ SET @update_1_0_1 = (
     SELECT IF(
         (
             SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_NAME = 'claramente_options' AND COLUMN_NAME = 'IS_ADMIN_ONLY'
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'claramente_options' AND COLUMN_NAME = 'IS_ADMIN_ONLY'
         ) > 0,
         'SELECT 1;',
         'ALTER TABLE claramente_options ADD COLUMN IS_ADMIN_ONLY TINYINT(1) NOT NULL DEFAULT 0;'
@@ -51,7 +51,7 @@ SET @update_1_0_2 = (
     SELECT IF(
         (
             SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_NAME = 'claramente_options' AND COLUMN_NAME = 'SINGLE_VALUE_FOR_ALL_LANG'
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'claramente_options' AND COLUMN_NAME = 'SINGLE_VALUE_FOR_ALL_LANG'
         ) > 0,
         'SELECT 1;',
         'ALTER TABLE claramente_options ADD COLUMN SINGLE_VALUE_FOR_ALL_LANG TINYINT(1) NOT NULL DEFAULT 1;'
