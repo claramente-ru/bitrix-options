@@ -150,6 +150,36 @@ abstract class AbstractOption
     }
 
     /**
+     * Подсказка к полю, общая для всех типов и языков.
+     */
+    public function getFormFieldHint(
+        string $postName,
+        CAdminForm &$form,
+        OptionEntityStructure $option
+    ): void {
+        $hint = $this->getSettingValue($option, 'hint');
+        if (!is_string($hint) || trim($hint) === '') {
+            return;
+        }
+
+        $form->AddViewField(
+            sprintf(
+                '%s[hint]',
+                $postName
+            ),
+            '',
+            sprintf(
+                '<p class="adm-info-message">%s</p>',
+                nl2br(htmlspecialcharsbx(
+                    $hint,
+                    ENT_QUOTES | ENT_SUBSTITUTE,
+                    false
+                ))
+            )
+        );
+    }
+
+    /**
      * Множественный вывод свойства в административном разделе
      * Значение опции задается для языка
      * @param string $postName

@@ -58,6 +58,11 @@ foreach ($form->getFormTabs() as $formTab) {
                     $option
                 );
             }
+            $optionType->getFormFieldHint(
+                $optionId,
+                $tabControl,
+                $option
+            );
         }
     }
 

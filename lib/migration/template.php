@@ -37,7 +37,10 @@ class <?php echo $version ?> extends <?php echo $extendClass ?>
     protected string $optionType = '<?php echo $params['OPTION_TYPE'] ?>';
     protected string $optionSiteId = '<?php echo $params['OPTION_SITE_ID'] ?>';
     protected ?string $optionValue = '<?php echo $params['OPTION_VALUE'] ?>';
-    protected ?string $optionSettings = '<?php echo $params['OPTION_SETTINGS'] ?>';
+    protected ?string $optionSettings = <?php echo var_export(
+        $params['OPTION_SETTINGS'],
+        true
+    ) ?>;
     protected int $optionSort = <?php echo $params['OPTION_SORT'] ?? 100 ?>;
     protected bool $optionSingleValueForAllLang = <?php echo $params['OPTION_SINGLE_VALUE_FOR_ALL_LANG'] ?>;
 

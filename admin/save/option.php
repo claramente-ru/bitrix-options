@@ -66,11 +66,34 @@ if (! $save->isSuccess()) {
 }
 
 // Добавим в данные для обновления дополнительные настройки типа данных
-$toUpdate['settings'] =  $optionType->beforeSaveSettings($request, ClaramenteOptionsTable::getOptionById($save->getId()));
+$toUpdate['settings'] = $optionType->beforeSaveSettings(
+    $request,
+    ClaramenteOptionsTable::getOptionById($save->getId())
+);
+if (array_key_exists(
+    'hint',
+    $option
+)) {
+    $settings = unserialize(
+        $toUpdate['settings'] ?: 'a:0:{}',
+        [
+            'allowed_classes' => false,
+        ]
+    );
+    $settings = is_array($settings) ? $settings : [];
+    unset($settings['hint']);
+    if (is_string($option['hint']) && trim($option['hint']) !== '') {
+        $settings['hint'] = $option['hint'];
+    }
+    $toUpdate['settings'] = serialize($settings);
+}
 
 // Если есть данные и поменялся тип хранения с единственного на множественное (SINGLE_VALUE_FOR_ALL_LANG = N) или обратно, то
 // необходимо изменить представление данных в базе с единичного значения на json или наоборот
-if ($currentOption->value && $currentOption->singleValueForAllLang !== $forAllLangNewValue) {
+if ($currentOption !== null
+    && $currentOption->value
+    && $currentOption->singleValueForAllLang !== $forAllLangNewValue
+) {
     if ($forAllLangNewValue) {
         $value = unserialize($currentOption->value, ['allowed_classes' => false]);
         if (is_array($value) && isset($value[0]['value'])) {

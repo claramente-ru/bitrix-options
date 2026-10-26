@@ -89,6 +89,28 @@ $tabControl->AddCheckBoxField(
 );
 $tabControl->AddCheckBoxField('option[is_admin_only]', '🔒 Доступен только администраторам', false, ['Y', 'N'], $option?->isAdminOnly);
 
+// Общая подсказка не зависит от реализации настроек конкретного типа.
+$settings = $option ? unserialize(
+    $option->settings ?: 'a:0:{}',
+    [
+        'allowed_classes' => false,
+    ]
+) : [];
+$hint = is_string($settings['hint'] ?? null) ? $settings['hint'] : '';
+$tabControl->AddTextField(
+    'option[hint]',
+    'Подсказка (текст без HTML)',
+    // CAdminForm декодирует HTML-сущности перед подготовкой значения textarea.
+    \Bitrix\Main\Text\HtmlFilter::encode(
+        $hint,
+        ENT_QUOTES | ENT_SUBSTITUTE
+    ),
+    [
+        'cols' => 60,
+        'rows' => 4,
+    ]
+);
+
 // Настройки типа данных
 if (! $isNewOption) {
     $optionType = $option->getOptionType();
