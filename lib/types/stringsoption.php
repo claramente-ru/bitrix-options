@@ -43,7 +43,7 @@ class StringsOption extends AbstractOption
     {
         $value = null;
         if ($option->value) {
-            $value = unserialize($option->value);
+            $value = unserialize($option->value, ['allowed_classes' => false]);
         }
 
         return is_array($value) ? $value : array_fill(0, $this->getNumberFields($option), '');

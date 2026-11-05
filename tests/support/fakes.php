@@ -37,6 +37,57 @@ namespace Bitrix\Main {
         {
             return null;
         }
+
+        public function getPostList(): object
+        {
+            return new class($this->post) {
+                public function __construct(private array $values)
+                {
+                }
+
+                public function toArray(): array
+                {
+                    return $this->values;
+                }
+            };
+        }
+
+        public function getQueryList(): object
+        {
+            return new class($this->query) {
+                public function __construct(private array $values)
+                {
+                }
+
+                public function toArray(): array
+                {
+                    return $this->values;
+                }
+            };
+        }
+    }
+
+    /**
+     * Сайты для SiteHelper
+     */
+    class SiteTable
+    {
+        public static array $sites = [];
+
+        public static function query(): object
+        {
+            return new class {
+                public function setSelect(array $select): self
+                {
+                    return $this;
+                }
+
+                public function fetchAll(): array
+                {
+                    return SiteTable::$sites;
+                }
+            };
+        }
     }
 
     class Application

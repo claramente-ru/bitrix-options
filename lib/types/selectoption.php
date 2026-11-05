@@ -44,10 +44,9 @@ class SelectOption extends AbstractOption
         $values = [
             null => 'Не установлено'
         ];
-        $settings = is_string($option->settings) ? unserialize($option->settings) : null;
+        $settings = $this->getSettings($option);
         if (
-            $settings
-            && ! empty($settings['values'])
+            ! empty($settings['values'])
             && is_array($settings['values'])
         ) {
             $values = array_merge($values, $settings['values']);
@@ -111,8 +110,8 @@ class SelectOption extends AbstractOption
     {
         $selectIndex = 0;
         $form->AddSection('option-settings', 'Настройки свойства');
-        $settings = unserialize($option->settings ?: '');
-        if ($settings && ! empty($settings['values'])) {
+        $settings = $this->getSettings($option);
+        if (! empty($settings['values'])) {
             foreach ($settings['values'] as $value) {
                 $form->AddEditField('option[settings][values][' . $selectIndex . ']', '📑 Элемент списка', false, [], $value);
                 $selectIndex++;

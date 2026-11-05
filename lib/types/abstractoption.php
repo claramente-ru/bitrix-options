@@ -289,9 +289,12 @@ abstract class AbstractOption
      */
     public function getSettings(OptionEntityStructure $option): array
     {
-        $settings = unserialize($option->settings ?: '');
+        if (! is_string($option->settings) || $option->settings === '') {
+            return [];
+        }
+        $settings = unserialize($option->settings, ['allowed_classes' => false]);
 
-        return $settings ?: [];
+        return is_array($settings) ? $settings : [];
     }
 
     /**
@@ -318,7 +321,7 @@ abstract class AbstractOption
     protected function getFieldHeader(OptionEntityStructure $option): string
     {
         return '<tr id="tr_options[' . $option->id . '][value]">
-    <td class="adm-detail-content-cell-l">' . $this->getOptionLabel($option) . '</td>
+    <td class="adm-detail-content-cell-l">' . htmlspecialcharsbx($this->getOptionLabel($option)) . '</td>
     <td class="adm-detail-content-cell-r">';
     }
 

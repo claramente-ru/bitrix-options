@@ -71,11 +71,7 @@ class StringOption extends AbstractOption
     ): void
     {
         // Регулярное выражение для проверки
-        $regex = $this->getCheckRegex($option);
-        $pattern = '';
-        if ($regex) {
-            $pattern = 'onkeyup="this.value=this.value.replace(' . $regex . ',\'\')"';
-        }
+        $pattern = $this->getClientFilterAttribute($option);
 
         // Размер поля ввода
         $size = $this->getSize($option);
@@ -85,7 +81,7 @@ class StringOption extends AbstractOption
         // Шапка
         echo $this->getFieldHeader($option);
         // Редактирование поле
-        echo '<input type="text" name="' . $postName . '[value]" size="' . $size. '" value="' . htmlspecialcharsbx($option->value) . '"' . $pattern . '>';
+        echo '<input type="text" name="' . htmlspecialcharsbx($postName) . '[value]" size="' . $size. '" value="' . htmlspecialcharsbx($option->value) . '"' . $pattern . '>';
         // Готовое решение для разрешенных символов
         $readyRegex = $this->getSettingValue($option, 'ready_regex');
         if ($readyRegex && isset($this::FIELD_CHECK_SELECT[$readyRegex])) {
@@ -174,7 +170,7 @@ class StringOption extends AbstractOption
      */
     protected function getFieldInput(string $name, int $size, ?string $value): string
     {
-        return '<input type="text" name="' . $name . '" size="' . $size. '" value="' . $value . '" style="margin-right: 10px;margin-top:3px;margin-bottom:0px;">';
+        return '<input type="text" name="' . htmlspecialcharsbx($name) . '" size="' . $size. '" value="' . $value . '" style="margin-right: 10px;margin-top:3px;margin-bottom:0px;">';
     }
 
     /**
@@ -224,6 +220,30 @@ class StringOption extends AbstractOption
         $readyRegex = $this::FIELD_CHECK_SELECT_REGEX[$this->getSettingValue($option, 'ready_regex')] ?? $this::FIELD_CHECK_SELECT_REGEX[null];
 
         return $this->getSettingValue($option, 'regex') ?: $readyRegex;
+    }
+
+    /**
+     * Атрибут onkeyup для удаления недопустимых символов в браузере.
+     * Регулярное выражение передается в JS как данные (new RegExp(JSON-строка)), а не как код,
+     * поэтому текст настройки не может выполнить произвольный скрипт
+     * @param OptionEntityStructure $option
+     * @return string
+     */
+    protected function getClientFilterAttribute(OptionEntityStructure $option): string
+    {
+        $regex = (string)$this->getCheckRegex($option);
+        if (! preg_match('~^/(.+)/([a-z]*)$~s', $regex, $matches)) {
+            return '';
+        }
+        // В JS допустимы только флаги i, m, s, u; g добавляется для замены всех вхождений
+        $flags = 'g' . preg_replace('/[^imsu]/', '', $matches[2]);
+        $js = sprintf(
+            'try{this.value=this.value.replace(new RegExp(%s,%s),\'\')}catch(e){}',
+            json_encode($matches[1], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT),
+            json_encode(count_chars($flags, 3))
+        );
+
+        return ' onkeyup="' . htmlspecialcharsbx($js) . '"';
     }
 
     /**
