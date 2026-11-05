@@ -138,6 +138,18 @@ abstract class AbstractOption
     }
 
     /**
+     * Действия после успешного удаления опции: удаление связанных с ней данных, например файлов.
+     * Вызывается только если опция удалена, чтобы при ошибке удаления опция не ссылалась на удаленные данные.
+     * По умолчанию ничего не делает; переопределяется в типах, которые хранят данные вне таблицы опций
+     * (@see FileOption::onAfterDelete()), в том числе в пользовательских наследниках
+     * @param OptionEntityStructure $option Удаленная опция со значениями всех языков
+     * @return void
+     */
+    public function onAfterDelete(OptionEntityStructure $option): void
+    {
+    }
+
+    /**
      * Вывод свойства в административном разделе
      * @param string $postName
      * @param CAdminForm $form

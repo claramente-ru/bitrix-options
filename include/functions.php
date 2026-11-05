@@ -115,12 +115,18 @@ if (! function_exists('cm_option_delete')) {
      */
     function cm_option_delete(string $code, ?string $siteId = null): bool
     {
-        $option = ClaramenteOptionsTable::getByCode($code, $siteId);
+        // Значение всех языков: у файла по языкам нужно удалить файлы каждого языка
+        $option = ClaramenteOptionsTable::getByCode($code, $siteId, getForAllLanguages: true);
         if (! $option) {
             return false;
         }
-        ClaramenteOptionsTable::delete($option->id);
+        $delete = ClaramenteOptionsTable::delete($option->id);
         ClaramenteOptionsTable::clearPreloader();
+        if (! $delete->isSuccess()) {
+            return false;
+        }
+        // Связанные данные типа (например, файлы) удаляются только после удаления опции
+        $option->getOptionType()?->onAfterDelete($option);
 
         return true;
     }

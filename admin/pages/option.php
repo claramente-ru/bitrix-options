@@ -46,10 +46,14 @@ if (! $isActionAllowed) {
     CAdminMessage::ShowMessage('Ошибка. Сессия истекла, обновите страницу и повторите действие');
 }
 
-// Действие: Удаление опции
-if ($isActionAllowed && $request->get('delete') === 'Y' && is_numeric($request->get('ID'))) {
-    ClaramenteOptionsTable::delete((int)$request->get('ID'));
-    LocalRedirect('/bitrix/admin/claramente_options.php?lang=' . LANG);
+// Действие: Удаление опции (вместе со связанными данными типа, например файлами)
+if ($isActionAllowed && $request->get('delete') === 'Y' && null !== $option) {
+    $delete = ClaramenteOptionsTable::delete($option->id);
+    if ($delete->isSuccess()) {
+        $option->getOptionType()?->onAfterDelete($option);
+        LocalRedirect('/bitrix/admin/claramente_options.php?lang=' . LANG);
+    }
+    CAdminMessage::ShowMessage('Ошибка удаления. ' . implode(',', $delete->getErrorMessages()));
 }
 
 // Действие: Миграция опции

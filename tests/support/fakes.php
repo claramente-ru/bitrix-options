@@ -299,7 +299,14 @@ namespace Claramente\Options\Entity {
         {
             foreach (self::$options as $option) {
                 if ($option->code === $code && $option->siteId === $siteId) {
-                    return clone $option;
+                    $option = clone $option;
+                    // Как в настоящей таблице: без $getForAllLanguages значение по языкам заменяется значением текущего языка
+                    if (null !== $option->value && ! $option->singleValueForAllLang && ! $getForAllLanguages) {
+                        $values = @unserialize($option->value, ['allowed_classes' => false]);
+                        $option->value = is_array($values) ? (string)(array_column($values, 'value', 'lang')[LANGUAGE_ID] ?? '') : '';
+                    }
+
+                    return $option;
                 }
             }
 
@@ -482,6 +489,14 @@ namespace {
     class CFile
     {
         public static array $files = [];
+
+        /** id удаленных файлов */
+        public static array $deleted = [];
+
+        public static function Delete($id): void
+        {
+            self::$deleted[] = $id;
+        }
 
         public static function GetFileArray($id): array|false
         {
