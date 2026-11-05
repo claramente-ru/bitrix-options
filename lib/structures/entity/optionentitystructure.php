@@ -77,7 +77,31 @@ final class OptionEntityStructure
     }
 
     /**
+     * Пустая структура для новой опции
+     * @return self
+     */
+    public static function empty(): self
+    {
+        return new self(
+            id: 0,
+            name: '',
+            code: '',
+            value: null,
+            type: 'string',
+            settings: null,
+            sort: 100,
+            tabId: null,
+            siteId: null,
+            singleValueForAllLang: true,
+            isAdminOnly: false,
+            createdAt: new DateTime(),
+            updatedAt: new DateTime()
+        );
+    }
+
+    /**
      * Установка нового значения
+     * Значение предварительно проверяется типом опции (@see AbstractOption::validateValue())
      * При ошибке значение не сохраняется, текст ошибки доступен через @see self::getLastError()
      * @param mixed $value
      * @return bool
@@ -99,6 +123,12 @@ final class OptionEntityStructure
                 $this->code,
                 get_debug_type($value)
             );
+            return false;
+        }
+
+        $error = $optionType->validateValue($this, $value, $multiple);
+        if (null !== $error) {
+            $this->lastError = $error;
             return false;
         }
 

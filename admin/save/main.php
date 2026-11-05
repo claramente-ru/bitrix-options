@@ -124,6 +124,9 @@ foreach ((array)$request->getPost('options_del') as $optionId => $value) {
     }
 }
 
+// Сначала проверяем все значения, затем сохраняем: при ошибке ни одно значение не меняется
+$errors = [];
+$toSave = [];
 foreach ($options as $optionId => $optionData) {
     // Заберем опцию по коду
     $option = ClaramenteOptionsTable::getOptionById((int)$optionId);
@@ -143,8 +146,37 @@ foreach ($options as $optionId => $optionData) {
         return;
     }
 
-    // Сохраним изменения
-    $option->setValue($optionData);
+    $error = $optionType->validateValue($option, $optionData, ! $option->singleValueForAllLang);
+    if (null !== $error) {
+        $errors[] = sprintf('«%s»: %s', $option->name, $error);
+        $failedOptionValues[$option->id] = $optionData;
+        continue;
+    }
+    $toSave[] = ['option' => $option, 'data' => $optionData];
+}
+
+if ($errors) {
+    CAdminMessage::ShowMessage([
+        'MESSAGE' => 'Значения параметров не сохранены',
+        'DETAILS' => implode("\n", $errors),
+        'TYPE' => 'ERROR',
+    ]);
+    return;
+}
+
+// Сохраним изменения
+foreach ($toSave as $item) {
+    if (! $item['option']->setValue($item['data'])) {
+        $errors[] = sprintf('«%s»: %s', $item['option']->name, $item['option']->getLastError() ?? 'ошибка сохранения');
+    }
+}
+if ($errors) {
+    CAdminMessage::ShowMessage([
+        'MESSAGE' => 'Часть значений не сохранена',
+        'DETAILS' => implode("\n", $errors),
+        'TYPE' => 'ERROR',
+    ]);
+    return;
 }
 
 // Редирект на страницу опций

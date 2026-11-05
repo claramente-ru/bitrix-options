@@ -6,6 +6,7 @@ use Bitrix\Main\Application;
 use Bitrix\Main\Type\DateTime;
 use Claramente\Options\Entity\ClaramenteOptionsTable;
 use Claramente\Options\Services\OptionTypes;
+use Claramente\Options\Structures\Entity\OptionEntityStructure;
 use Claramente\Options\Types\AbstractOption;
 
 if (! $USER->IsAdmin()) {
@@ -66,6 +67,13 @@ if (array_key_exists('hint', $option)) {
     }
 }
 
+// Проверка настроек типа данных
+$settingsError = $optionType->validateSettings($request);
+if (null !== $settingsError) {
+    CAdminMessage::ShowMessage('Ошибка. ' . $settingsError);
+    return;
+}
+
 $forAllLangNewValue = isset($option['single_value_for_all_lang']) && $option['single_value_for_all_lang'] === 'Y';
 $data = [
     'NAME' => $option['name'] ?? 'Без имени',
@@ -80,29 +88,11 @@ $data = [
     'UPDATED_AT' => new DateTime(),
 ];
 
-// Редактирование опции
-if (! $isNewOption) {
-    $save = ClaramenteOptionsTable::update($currentOption->id, $data);
-} else {
-    // Добавление новое опции
-    $save = ClaramenteOptionsTable::add($data);
-}
-// Ниже опция читается заново, поэтому предзагруженные данные сбрасываем
-ClaramenteOptionsTable::clearPreloader();
-
-if (! $save->isSuccess()) {
-    CAdminMessage::ShowMessage('Ошибка ' . implode(',', $save->getErrorMessages()));
-    return;
-}
-
-// Добавим в данные для обновления дополнительные настройки типа данных
-$toUpdate['settings'] = $optionType->beforeSaveSettings(
-    $request,
-    ClaramenteOptionsTable::getOptionById($save->getId())
-);
+// Настройки типа данных и подсказка
+$newSettings = $optionType->beforeSaveSettings($request, $currentOption ?? OptionEntityStructure::empty());
 if (null !== $hint || $currentOption !== null) {
     $settings = unserialize(
-        $toUpdate['settings'] ?: 'a:0:{}',
+        $newSettings ?: 'a:0:{}',
         [
             'allowed_classes' => false,
         ]
@@ -114,11 +104,13 @@ if (null !== $hint || $currentOption !== null) {
     if (trim($hintToSave) !== '') {
         $settings['hint'] = $hintToSave;
     }
-    $toUpdate['settings'] = serialize($settings);
+    $newSettings = serialize($settings);
 }
+$data['SETTINGS'] = $newSettings;
 
 // Если есть данные и поменялся тип хранения с единственного на множественное (SINGLE_VALUE_FOR_ALL_LANG = N) или обратно, то
 // необходимо изменить представление данных в базе с единичного значения на json или наоборот
+$newValue = $currentOption?->value;
 if ($currentOption !== null
     && $currentOption->value
     && $currentOption->singleValueForAllLang !== $forAllLangNewValue
@@ -126,22 +118,50 @@ if ($currentOption !== null
     if ($forAllLangNewValue) {
         $value = unserialize($currentOption->value, ['allowed_classes' => false]);
         if (is_array($value) && isset($value[0]['value'])) {
-            $toUpdate['value'] = $value[0]['value'];
+            $newValue = $value[0]['value'];
+            $data['VALUE'] = $newValue;
         }
     } else {
-        $toUpdate['value'] = serialize([
+        $newValue = serialize([
             [
                 'value' => $currentOption->value,
                 'lang'  => LANG
             ]
         ]);
+        $data['VALUE'] = $newValue;
     }
 }
 
-ClaramenteOptionsTable::update(
-    $save->getId(),
-    $toUpdate
-);
+// Текущее значение должно подходить под новый тип и настройки
+if ($currentOption !== null && null !== $newValue && $newValue !== '') {
+    $checkOption = clone $currentOption;
+    $checkOption->type = (string)$data['TYPE'];
+    $checkOption->settings = $newSettings;
+    $checkOption->value = (string)$newValue;
+    $checkOption->singleValueForAllLang = $forAllLangNewValue;
+    $storedError = $optionType->validateStoredValue($checkOption);
+    if (null !== $storedError) {
+        CAdminMessage::ShowMessage(
+            'Ошибка. Текущее значение параметра не подходит под новые настройки: ' . $storedError
+            . '. Измените или очистите значение на странице параметров и повторите сохранение.'
+        );
+        return;
+    }
+}
+
+// Редактирование опции
+if (! $isNewOption) {
+    $save = ClaramenteOptionsTable::update($currentOption->id, $data);
+} else {
+    // Добавление новое опции
+    $save = ClaramenteOptionsTable::add($data);
+}
+ClaramenteOptionsTable::clearPreloader();
+
+if (! $save->isSuccess()) {
+    CAdminMessage::ShowMessage('Ошибка ' . implode(',', $save->getErrorMessages()));
+    return;
+}
 
 // Редирект относительно нажатой кнопки
 if ($request->getPost('apply')) {

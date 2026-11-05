@@ -150,6 +150,39 @@ abstract class AbstractOption
     }
 
     /**
+     * Серверная проверка значения перед сохранением (форма и @see cm_option_set())
+     * По умолчанию любое значение допустимо
+     * @param OptionEntityStructure $option
+     * @param mixed $value Значение в том же виде, что и для @see self::getValueBeforeSave()
+     * @param bool $multiple Отдельные значения для каждого языка
+     * @return string|null Текст ошибки или null, если значение допустимо
+     */
+    public function validateValue(OptionEntityStructure $option, mixed $value, bool $multiple = false): ?string
+    {
+        return null;
+    }
+
+    /**
+     * Проверка сохраненного значения при изменении типа или настроек опции
+     * @param OptionEntityStructure $option Опция с новыми типом и настройками и текущим значением
+     * @return string|null Текст ошибки или null
+     */
+    public function validateStoredValue(OptionEntityStructure $option): ?string
+    {
+        return null;
+    }
+
+    /**
+     * Проверка дополнительных настроек типа перед сохранением параметра
+     * @param HttpRequest $request
+     * @return string|null Текст ошибки или null
+     */
+    public function validateSettings(HttpRequest $request): ?string
+    {
+        return null;
+    }
+
+    /**
      * Вывод свойства в административном разделе
      * @param string $postName
      * @param CAdminForm $form

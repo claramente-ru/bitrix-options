@@ -10,7 +10,8 @@ use Claramente\Options\Types\StringOption;
  * @var CUser $USER
  */
 
-// Сохранение формы
+// Сохранение формы. Значения, не прошедшие проверку: id опции => введенное значение
+$failedOptionValues = [];
 if ($request->isPost()) {
     require_once __DIR__ . '/../save/main.php';
 }
@@ -48,6 +49,22 @@ foreach ($formTabs as $formTab) {
             $optionType = $option->getOptionType();
             if (null === $optionType) {
                 $optionType = new StringOption();
+            }
+
+            // Значение не прошло проверку: показываем введенные данные
+            if (array_key_exists($option->id, $failedOptionValues)) {
+                $failedValue = $failedOptionValues[$option->id];
+                if ($option->singleValueForAllLang) {
+                    $failedValue = is_array($failedValue) ? ($failedValue['value'] ?? null) : $failedValue;
+                    if (is_scalar($failedValue)) {
+                        $option->value = (string)$failedValue;
+                    }
+                } elseif (is_array($failedValue)) {
+                    $option->value = serialize(array_values(array_filter(
+                        $failedValue,
+                        static fn($item): bool => is_array($item) && is_scalar($item['value'] ?? null)
+                    )));
+                }
             }
 
             // Форма редактирования опции

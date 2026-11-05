@@ -223,6 +223,96 @@ class StringOption extends AbstractOption
     }
 
     /**
+     * Серверная проверка готовых наборов разрешенных символов («Только цифры» и т.п.)
+     * Пользовательское регулярное выражение проверяется только в браузере: синтаксис JS и PCRE различается
+     * Значение, совпадающее с сохраненным, не проверяется, чтобы старые значения не мешали сохранению
+     * @param OptionEntityStructure $option
+     * @param mixed $value
+     * @param bool $multiple
+     * @return string|null
+     */
+    public function validateValue(OptionEntityStructure $option, mixed $value, bool $multiple = false): ?string
+    {
+        if (null === $this->getReadyRegex($option)) {
+            return null;
+        }
+        $items = $multiple && is_array($value)
+            ? array_map(static fn($item) => is_array($item) ? ($item['value'] ?? null) : null, $value)
+            : [is_array($value) ? ($value['value'] ?? null) : $value];
+        $storedValues = array_map('strval', $this->getStoredItems($option));
+
+        return $this->checkReadyRegex($option, array_filter(
+            $items,
+            static fn($item): bool => ! in_array((string)$item, $storedValues, true)
+        ));
+    }
+
+    /**
+     * Сохраненное значение должно подходить под выбранный набор разрешенных символов
+     * @param OptionEntityStructure $option
+     * @return string|null
+     */
+    public function validateStoredValue(OptionEntityStructure $option): ?string
+    {
+        return $this->checkReadyRegex($option, $this->getStoredItems($option));
+    }
+
+    /**
+     * Регулярное выражение готового набора символов или null, если набор не выбран
+     * или задано пользовательское регулярное выражение
+     * @param OptionEntityStructure $option
+     * @return string|null
+     */
+    private function getReadyRegex(OptionEntityStructure $option): ?string
+    {
+        if ($this->getSettingValue($option, 'regex')) {
+            return null;
+        }
+        $readyRegex = $this->getSettingValue($option, 'ready_regex');
+        $regex = is_string($readyRegex) ? ($this::FIELD_CHECK_SELECT_REGEX[$readyRegex] ?? '') : '';
+
+        return $regex !== '' ? $regex : null;
+    }
+
+    /**
+     * Проверка значений по готовому набору разрешенных символов
+     * @param OptionEntityStructure $option
+     * @param array $items
+     * @return string|null
+     */
+    private function checkReadyRegex(OptionEntityStructure $option, array $items): ?string
+    {
+        $regex = $this->getReadyRegex($option);
+        if (null === $regex) {
+            return null;
+        }
+        foreach ($items as $item) {
+            if (is_scalar($item) && preg_match($regex . 'u', (string)$item)) {
+                $readyRegex = $this->getSettingValue($option, 'ready_regex');
+
+                return sprintf('Недопустимые символы. Разрешено: %s', mb_strtolower($this::FIELD_CHECK_SELECT[$readyRegex]));
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Сохраненные значения: одно значение или значения всех языков
+     * @param OptionEntityStructure $option
+     * @return array
+     */
+    private function getStoredItems(OptionEntityStructure $option): array
+    {
+        if ($option->singleValueForAllLang) {
+            return [$option->value];
+        }
+        $values = is_string($option->value) ? @unserialize($option->value, ['allowed_classes' => false]) : null;
+
+        return is_array($values) ? array_column(array_filter($values, 'is_array'), 'value') : [$option->value];
+    }
+
+    /**
      * Атрибут onkeyup для удаления недопустимых символов в браузере.
      * Регулярное выражение передается в JS как данные (new RegExp(JSON-строка)), а не как код,
      * поэтому текст настройки не может выполнить произвольный скрипт
