@@ -55,7 +55,7 @@ function digitsOption(int $id, ?string $value, bool $single = true): OptionEntit
 
 test('validation: по умолчанию типы принимают любое значение', function (): void {
     foreach (OptionTypes::getTypes() as $code => $class) {
-        if (in_array($code, ['string', 'custom', 'validation_test'], true)) {
+        if (in_array($code, ['string', 'number', 'custom', 'validation_test'], true)) {
             continue;
         }
         $type = new $class();

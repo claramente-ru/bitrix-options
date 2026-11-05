@@ -18,6 +18,7 @@ final class OptionTypes
     public static array $defaultTypes = [
         'string' => 'Claramente\Options\Types\StringOption',
         'strings' => 'Claramente\Options\Types\StringsOption',
+        'number' => 'Claramente\Options\Types\NumberOption',
         'bool' => 'Claramente\Options\Types\BoolOption',
         'date' => 'Claramente\Options\Types\DateOption',
         'select' => 'Claramente\Options\Types\SelectOption',

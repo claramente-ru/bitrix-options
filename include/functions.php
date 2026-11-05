@@ -131,4 +131,3 @@ if (! function_exists('cm_option_delete')) {
         return true;
     }
 }
-
