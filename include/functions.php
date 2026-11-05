@@ -111,6 +111,8 @@ if (! function_exists('cm_option_delete')) {
             return false;
         }
         ClaramenteOptionsTable::delete($option->id);
+        ClaramenteOptionsTable::clearPreloader();
+
         return true;
     }
 }

@@ -89,6 +89,7 @@ final class OptionEntityStructure
                 'UPDATED_AT' => new DateTime(),
             ]
         );
+        ClaramenteOptionsTable::clearPreloader();
 
         return $update->isSuccess();
     }

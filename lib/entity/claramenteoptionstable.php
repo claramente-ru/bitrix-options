@@ -115,9 +115,7 @@ final class ClaramenteOptionsTable extends DataManager
             ->setFilter($filter)
             ->setSelect(['*']);
         // Кэширование данных
-        if (null !== $cacheTtl && defined('CLARAMENTE_OPTIONS_CACHE_TIME')) {
-            $cacheTtl = (int)CLARAMENTE_OPTIONS_CACHE_TIME;
-        }
+        $cacheTtl = self::resolveCacheTtl($cacheTtl);
         if ($cacheTtl) {
             $dbOptions->setCacheTtl($cacheTtl);
         }
@@ -147,7 +145,7 @@ final class ClaramenteOptionsTable extends DataManager
         if (self::isEnabledPreloader()) {
             // Загрузим все элементы если ранее не были загружены
             self::preloaderOptions();
-            $key = $code . $siteId ?: '';
+            $key = self::getPreloaderKey($code, $siteId);
             if (array_key_exists($key, self::$preloaderCacheCodes)) {
                 $option = self::$preloaderCacheCodes[$key];
                 // Заполнили option, отметим это
@@ -163,9 +161,7 @@ final class ClaramenteOptionsTable extends DataManager
                 ])
                 ->setSelect(['*']);
             // Кэширование данных
-            if (null !== $cacheTtl && defined('CLARAMENTE_OPTIONS_CACHE_TIME')) {
-                $cacheTtl = (int)CLARAMENTE_OPTIONS_CACHE_TIME;
-            }
+            $cacheTtl = self::resolveCacheTtl($cacheTtl);
             if ($cacheTtl) {
                 $option->setCacheTtl($cacheTtl);
             }
@@ -206,9 +202,7 @@ final class ClaramenteOptionsTable extends DataManager
                 ])
                 ->setSelect(['*']);
             // Кэширование данных
-            if (null !== $cacheTtl && defined('CLARAMENTE_OPTIONS_CACHE_TIME')) {
-                $cacheTtl = (int)CLARAMENTE_OPTIONS_CACHE_TIME;
-            }
+            $cacheTtl = self::resolveCacheTtl($cacheTtl);
             if ($cacheTtl) {
                 $option->setCacheTtl($cacheTtl);
             }
@@ -216,6 +210,44 @@ final class ClaramenteOptionsTable extends DataManager
         }
 
         return $option ? OptionEntityStructure::fromArray($option) : null;
+    }
+
+    /**
+     * Сброс загруженных предзагрузчиком данных.
+     * Вызывается после изменения опций, чтобы в рамках одного хита не читать устаревшие значения
+     * @return void
+     */
+    public static function clearPreloader(): void
+    {
+        self::$preloaderCacheCodes = [];
+        self::$preloaderCacheIds = [];
+        self::$preloaderOptions = false;
+    }
+
+    /**
+     * Ключ предзагрузчика: код и сайт разделены, чтобы пары foo + s1 и foos1 + null не совпадали
+     * @param string $code
+     * @param string|null $siteId
+     * @return string
+     */
+    private static function getPreloaderKey(string $code, ?string $siteId): string
+    {
+        return $code . "\0" . (string)$siteId;
+    }
+
+    /**
+     * Время кэширования: явно переданное значение приоритетнее глобальной константы
+     * CLARAMENTE_OPTIONS_CACHE_TIME; константа применяется, если время не передано или равно 0
+     * @param int|null $cacheTtl
+     * @return int
+     */
+    private static function resolveCacheTtl(?int $cacheTtl): int
+    {
+        if ($cacheTtl) {
+            return $cacheTtl;
+        }
+
+        return defined('CLARAMENTE_OPTIONS_CACHE_TIME') ? (int)CLARAMENTE_OPTIONS_CACHE_TIME : 0;
     }
 
     /**
@@ -242,7 +274,7 @@ final class ClaramenteOptionsTable extends DataManager
         $options = self::query()
             ->setSelect(['*']);
         foreach ($options->fetchAll() as $option) {
-            $key = $option['CODE'] . $option['SITE_ID'] ?: '';
+            $key = self::getPreloaderKey((string)$option['CODE'], $option['SITE_ID']);
             self::$preloaderCacheCodes[$key] = $option;
             self::$preloaderCacheIds[(int)$option['ID']] = $option;
         }

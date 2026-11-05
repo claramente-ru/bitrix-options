@@ -168,6 +168,68 @@ namespace Claramente\Options\Admin {
     }
 }
 
+namespace Bitrix\Main\Entity {
+    /**
+     * Запросы ORM к строкам в памяти. Нужна для проверки настоящего ClaramenteOptionsTable (tests/cases/cache.php):
+     * запоминает фильтр и время кэширования каждого запроса
+     */
+    class DataManager
+    {
+        /** Строки таблицы */
+        public static array $rows = [];
+
+        /** Выполненные запросы: ['filter' => ..., 'ttl' => ...] */
+        public static array $queries = [];
+
+        public static function query(): object
+        {
+            return new class {
+                private array $filter = [];
+                private int $ttl = 0;
+
+                public function setFilter(array $filter): self
+                {
+                    $this->filter = $filter;
+
+                    return $this;
+                }
+
+                public function setSelect(array $select): self
+                {
+                    return $this;
+                }
+
+                public function setCacheTtl(int $ttl): self
+                {
+                    $this->ttl = $ttl;
+
+                    return $this;
+                }
+
+                public function fetchAll(): array
+                {
+                    DataManager::$queries[] = ['filter' => $this->filter, 'ttl' => $this->ttl];
+
+                    return array_values(array_filter(DataManager::$rows, function (array $row): bool {
+                        foreach ($this->filter as $field => $value) {
+                            if ($row[$field] !== $value) {
+                                return false;
+                            }
+                        }
+
+                        return true;
+                    }));
+                }
+
+                public function fetch(): array|false
+                {
+                    return $this->fetchAll()[0] ?? false;
+                }
+            };
+        }
+    }
+}
+
 namespace Claramente\Options\Entity {
     use Claramente\Options\Structures\Entity\OptionEntityStructure;
     use Claramente\Options\Structures\Entity\TabEntityStructure;
@@ -185,6 +247,14 @@ namespace Claramente\Options\Entity {
 
         /** Ошибка, которую вернет следующая операция записи */
         public static ?string $failNext = null;
+
+        /** Сколько раз сбрасывались данные предзагрузчика */
+        public static int $preloaderResets = 0;
+
+        public static function clearPreloader(): void
+        {
+            self::$preloaderResets++;
+        }
 
         private const FIELDS = [
             'NAME' => 'name', 'CODE' => 'code', 'VALUE' => 'value', 'TYPE' => 'type', 'SETTINGS' => 'settings',

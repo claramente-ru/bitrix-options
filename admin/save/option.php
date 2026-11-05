@@ -82,6 +82,8 @@ if (! $isNewOption) {
     // Добавление новое опции
     $save = ClaramenteOptionsTable::add($data);
 }
+// Ниже опция читается заново, поэтому предзагруженные данные сбрасываем
+ClaramenteOptionsTable::clearPreloader();
 
 if (! $save->isSuccess()) {
     CAdminMessage::ShowMessage('Ошибка ' . implode(',', $save->getErrorMessages()));
