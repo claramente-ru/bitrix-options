@@ -6,9 +6,8 @@ use Bitrix\Main\Application;
 use Claramente\Options\Entity\ClaramenteOptionsTable;
 use Claramente\Options\Entity\ClaramenteOptionTabsTable;
 
-if (! $USER->IsAdmin()) {
-    return;
-}
+// Значения опций сохраняют все пользователи модуля;
+// опции «только для администраторов» и вкладки меняет только администратор
 
 if (! check_bitrix_sessid()) {
     CAdminMessage::ShowMessage('Ошибка. Сессия истекла, обновите страницу и повторите сохранение');
@@ -20,7 +19,8 @@ $request = Application::getInstance()->getContext()->getRequest();
 /**
  * Добавление новой вкладки
  */
-$newTab = $request->getPost('tab_add');
+// Вкладки, как и сами опции, создают, изменяют и удаляют только администраторы
+$newTab = $USER->IsAdmin() ? $request->getPost('tab_add') : null;
 if (! empty($newTab['name']) && ! empty($newTab['code'])) {
     // Проверяем занятость кода
     if (ClaramenteOptionTabsTable::getByCode($newTab['code'])) {
@@ -44,7 +44,7 @@ if (! empty($newTab['name']) && ! empty($newTab['code'])) {
 /**
  * Обработка вкладок
  */
-$tabs = $request->getPost('tabs');
+$tabs = $USER->IsAdmin() ? $request->getPost('tabs') : null;
 if (is_array($tabs) && $tabs) {
     foreach ($tabs as $tabId => $tab) {
         // Необходимо удалить вкладку

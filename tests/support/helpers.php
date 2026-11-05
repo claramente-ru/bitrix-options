@@ -51,7 +51,7 @@ function fakeUser(bool $isAdmin): object
  * $vars — переменные области видимости вызывающей страницы (например, $request).
  * Возвращает адрес редиректа или null, если редиректа не было
  */
-function runAdminScript(string $file, object $user, array $vars = []): ?string
+function runAdminScript(string $file, object $user, array $vars = [], ?string &$output = null): ?string
 {
     $GLOBALS['USER'] = $user;
     $USER = $user;
@@ -62,7 +62,7 @@ function runAdminScript(string $file, object $user, array $vars = []): ?string
     } catch (RedirectException $redirect) {
         return $redirect->getMessage();
     } finally {
-        ob_end_clean();
+        $output = (string)ob_get_clean();
     }
 
     return null;

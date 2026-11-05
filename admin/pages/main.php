@@ -17,7 +17,12 @@ if ($request->isPost()) {
 
 // Главная страница модуля
 $form = new AdminForm();
-$tabControl = $form->getForm('claramente_options_form', $form->getFormTabs());
+// Вкладка настройки вкладок доступна только администраторам
+$formTabs = array_values(array_filter(
+    $form->getFormTabs(),
+    static fn(array $formTab): bool => 'tabs' !== $formTab['DIV'] || $USER->IsAdmin()
+));
+$tabControl = $form->getForm('claramente_options_form', $formTabs);
 $tabControl->SetShowSettings(false);
 // Защита от CSRF: токен сессии проверяется при сохранении
 $tabControl->BeginEpilogContent();
@@ -27,7 +32,7 @@ $tabControl->Begin([
     'FORM_ACTION' => $request->getRequestUri()
 ]);
 // Проходимся по всем tabs
-foreach ($form->getFormTabs() as $formTab) {
+foreach ($formTabs as $formTab) {
     $tabControl->BeginNextFormTab();
 
     // Вкладка - Параметры (содержит опции которые не привязаны к вкладкам)
@@ -137,8 +142,8 @@ $tabControl->Buttons(
 $tabControl->Show();
 include_once __DIR__ . '/../include/info.php';
 ?>
-<?php if ($USER->IsAdmin()) { ?>
 <script>
+<?php if ($USER->IsAdmin()) { ?>
     document.addEventListener("DOMContentLoaded", function () {
         // Редактирование опций доступно только администраторам
         document.querySelectorAll("tr[id^='tr_options']").forEach(function (input) {
@@ -156,7 +161,9 @@ include_once __DIR__ . '/../include/info.php';
             tdName.append(editLink);
         });
     });
+<?php } ?>
 
+    // Добавление строки значения для языка (доступно всем пользователям модуля)
     function addOptionRow(tableId, regexp) {
         let table = document.getElementById(tableId)
         if (! table) return;
@@ -236,4 +243,3 @@ include_once __DIR__ . '/../include/info.php';
 
     }
 </script>
-<?php } ?>

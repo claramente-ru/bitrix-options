@@ -128,15 +128,14 @@ namespace Claramente\Options\Admin {
     {
         public static array $options = [];
         public static ?CAdminForm $form = null;
+        /** DIV вкладок, переданных в форму */
+        public static array $formTabs = [];
 
-        public function getFormTabs(): array
+        public function getFormTabs(bool $withTechnicalTabs = true): array
         {
-            return [
-                [
-                    'ID' => 0,
-                    'DIV' => 'options',
-                ],
-            ];
+            return $withTechnicalTabs
+                ? [['ID' => 0, 'DIV' => 'options'], ['ID' => null, 'DIV' => 'tabs']]
+                : [];
         }
 
         public function getTabOptions($id): array
@@ -146,6 +145,7 @@ namespace Claramente\Options\Admin {
 
         public function getForm($name, $tabs, $canExpand = true, $denyAutosave = false): CAdminForm
         {
+            self::$formTabs = array_column($tabs, 'DIV');
             self::$form = new CAdminForm();
 
             return self::$form;
@@ -300,6 +300,16 @@ namespace Claramente\Options\Entity {
             self::$tabs[$id] = new TabEntityStructure($id, (string)$data['NAME'], (string)$data['CODE'], (int)($data['SORT'] ?? 100));
 
             return fakeResult(true, $id);
+        }
+
+        public static function update($id, $data)
+        {
+            $tab = self::$tabs[(int)$id] ?? null;
+            if ($tab) {
+                self::$tabs[(int)$id] = new TabEntityStructure($tab->id, (string)($data['NAME'] ?? $tab->name), (string)($data['CODE'] ?? $tab->code), (int)($data['SORT'] ?? $tab->sort));
+            }
+
+            return fakeResult(true, (int)$id);
         }
 
         public static function delete($id)
