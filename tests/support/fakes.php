@@ -94,49 +94,153 @@ namespace Claramente\Options\Admin {
 }
 
 namespace Claramente\Options\Entity {
+    use Claramente\Options\Structures\Entity\OptionEntityStructure;
+    use Claramente\Options\Structures\Entity\TabEntityStructure;
+
+    use function fakeResult;
     use function fixture;
 
+    /**
+     * Таблица опций в памяти
+     */
     class ClaramenteOptionsTable
     {
+        /** @var OptionEntityStructure[] */
         public static array $options = [];
+
+        /** Ошибка, которую вернет следующая операция записи */
+        public static ?string $failNext = null;
+
+        private const FIELDS = [
+            'NAME' => 'name', 'CODE' => 'code', 'VALUE' => 'value', 'TYPE' => 'type', 'SETTINGS' => 'settings',
+            'SORT' => 'sort', 'TAB_ID' => 'tabId', 'SITE_ID' => 'siteId',
+            'SINGLE_VALUE_FOR_ALL_LANG' => 'singleValueForAllLang', 'IS_ADMIN_ONLY' => 'isAdminOnly',
+        ];
 
         public static function getOptionById($id)
         {
-            return self::$options[$id] ?? null;
+            return isset(self::$options[(int)$id]) ? clone self::$options[(int)$id] : null;
         }
 
-        public static function getByCode($code, $site)
+        public static function getByCode($code, $siteId = null, $cacheTtl = null, $getForAllLanguages = false)
         {
+            foreach (self::$options as $option) {
+                if ($option->code === $code && $option->siteId === $siteId) {
+                    return clone $option;
+                }
+            }
+
             return null;
+        }
+
+        public static function getByTabId(int $tabId, ?string $siteId = null): array
+        {
+            return array_values(array_filter(
+                self::$options,
+                static fn(OptionEntityStructure $option): bool => $option->tabId === $tabId
+                    && (null === $siteId || $option->siteId === $siteId)
+            ));
         }
 
         public static function add($data)
         {
-            self::$options[1] = fixture();
+            if ($error = self::takeFailure()) {
+                return fakeResult(false, 0, [$error]);
+            }
+            $id = self::$options ? max(array_keys(self::$options)) + 1 : 1;
+            self::$options[$id] = fixture();
+            self::$options[$id]->id = $id;
+            self::$options[$id]->code = '';
+            self::apply($id, $data);
 
-            return self::update(1, $data);
+            return fakeResult(true, $id);
         }
 
         public static function update($id, $data)
         {
+            if ($error = self::takeFailure()) {
+                return fakeResult(false, (int)$id, [$error]);
+            }
+            self::apply((int)$id, $data);
+
+            return fakeResult(true, (int)$id);
+        }
+
+        public static function delete($id)
+        {
+            if ($error = self::takeFailure()) {
+                return fakeResult(false, (int)$id, [$error]);
+            }
+            unset(self::$options[(int)$id]);
+
+            return fakeResult(true, (int)$id);
+        }
+
+        private static function apply(int $id, array $data): void
+        {
             foreach ($data as $key => $value) {
-                if (strtolower($key) === 'settings') {
-                    self::$options[$id]->settings = $value;
+                $property = self::FIELDS[strtoupper((string)$key)] ?? null;
+                if ($property) {
+                    self::$options[$id]->{$property} = $value;
+                }
+            }
+        }
+
+        private static function takeFailure(): ?string
+        {
+            $error = self::$failNext;
+            self::$failNext = null;
+
+            return $error;
+        }
+    }
+
+    /**
+     * Таблица вкладок в памяти
+     */
+    class ClaramenteOptionTabsTable
+    {
+        /** @var TabEntityStructure[] */
+        public static array $tabs = [];
+
+        public static function getByCode($code)
+        {
+            foreach (self::$tabs as $tab) {
+                if ($tab->code === $code) {
+                    return clone $tab;
                 }
             }
 
-            return new class {
-                public function isSuccess(): bool
-                {
-                    return true;
-                }
-
-                public function getId(): int
-                {
-                    return 1;
-                }
-            };
+            return null;
         }
+
+        public static function getTabById($id)
+        {
+            return isset(self::$tabs[(int)$id]) ? clone self::$tabs[(int)$id] : null;
+        }
+
+        public static function add($data)
+        {
+            $id = self::$tabs ? max(array_keys(self::$tabs)) + 1 : 1;
+            self::$tabs[$id] = new TabEntityStructure($id, (string)$data['NAME'], (string)$data['CODE'], (int)($data['SORT'] ?? 100));
+
+            return fakeResult(true, $id);
+        }
+
+        public static function delete($id)
+        {
+            unset(self::$tabs[(int)$id]);
+
+            return fakeResult(true, (int)$id);
+        }
+    }
+}
+
+namespace Sprint\Migration\Exceptions {
+    use Exception;
+
+    class MigrationException extends Exception
+    {
     }
 }
 

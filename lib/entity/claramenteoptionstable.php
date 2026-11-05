@@ -96,7 +96,7 @@ final class ClaramenteOptionsTable extends DataManager
     /**
      * Получить опции по идентификатору вкладки
      * @param int $tabId
-     * @param string|null $siteId
+     * @param string|null $siteId Сайт; null — опции вкладки для всех сайтов
      * @param int|null $cacheTtl Кэширование данных
      * @return OptionEntityStructure[]
      */
@@ -107,11 +107,12 @@ final class ClaramenteOptionsTable extends DataManager
     ): array
     {
         $options = [];
+        $filter = ['TAB_ID' => $tabId];
+        if (null !== $siteId) {
+            $filter['SITE_ID'] = $siteId;
+        }
         $dbOptions = self::query()
-            ->setFilter([
-                'TAB_ID' => $tabId,
-                'SITE_ID' => $siteId
-            ])
+            ->setFilter($filter)
             ->setSelect(['*']);
         // Кэширование данных
         if (null !== $cacheTtl && defined('CLARAMENTE_OPTIONS_CACHE_TIME')) {

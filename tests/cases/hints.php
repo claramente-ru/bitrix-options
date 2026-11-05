@@ -6,7 +6,6 @@ use Bitrix\Main\Application;
 use Bitrix\Main\HttpRequest;
 use Claramente\Options\Admin\AdminForm;
 use Claramente\Options\Entity\ClaramenteOptionsTable;
-use Claramente\Options\Services\MigrationService;
 use Claramente\Options\Structures\Entity\OptionEntityStructure;
 use Claramente\Options\Types\AbstractOption;
 use Claramente\Options\Types\BoolOption;
@@ -183,49 +182,11 @@ test('hints: подсказка длиннее лимита отклоняетс
 });
 
 test('hints: миграция переносит подсказку в SETTINGS без изменений', function (): void {
-    $service = (new ReflectionClass(MigrationService::class))->newInstanceWithoutConstructor();
     $settings = serialize(['hint' => "Quote ' slash \\ newline\nUnicode: текст"]);
-    $params = (new ReflectionMethod(MigrationService::class, 'getMigrationData'))->invoke($service, [
+    $result = renderMigration([
         'TAB_ID' => null, 'NAME' => 'Sample', 'CODE' => 'sample', 'TYPE' => 'string',
         'SITE_ID' => null, 'VALUE' => null, 'SETTINGS' => $settings, 'SORT' => 100,
         'SINGLE_VALUE_FOR_ALL_LANG' => true,
-    ], null);
-    assertSame($settings, $params['OPTION_SETTINGS'], 'данные миграции');
-
-    $builder = new class($params) {
-        public function __construct(private array $params)
-        {
-        }
-
-        public function getVersionConfig(): object
-        {
-            return new class($this->params) {
-                public function __construct(private array $params)
-                {
-                }
-
-                public function getList(): array
-                {
-                    return [['values' => $this->params]];
-                }
-            };
-        }
-
-        public function render(): string
-        {
-            $version = 'SyntheticHintMigration';
-            $description = 'Sample';
-            $extendUse = '';
-            $extendClass = '\\stdClass';
-            $moduleVersion = '1.0.0';
-            $author = 'Sample';
-            ob_start();
-            require __DIR__ . '/../../lib/migration/template.php';
-
-            return ob_get_clean();
-        }
-    };
-    eval(substr($builder->render(), 5));
-    $migration = (new ReflectionClass('Sprint\\Migration\\SyntheticHintMigration'))->newInstanceWithoutConstructor();
-    assertSame($settings, (new ReflectionProperty($migration, 'optionSettings'))->getValue($migration), 'значение в сгенерированной миграции');
+    ]);
+    assertSame($settings, prop($result['migration'], 'optionSettings'), 'значение в сгенерированной миграции');
 });
