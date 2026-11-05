@@ -111,6 +111,32 @@ namespace Bitrix\Main {
     }
 }
 
+namespace Bitrix\Main {
+    /**
+     * Запоминает регистрацию и снятие обработчиков событий
+     */
+    class EventManager
+    {
+        public static array $registered = [];
+        public static array $unregistered = [];
+
+        public static function getInstance(): self
+        {
+            return new self();
+        }
+
+        public function registerEventHandler(...$arguments): void
+        {
+            self::$registered[] = $arguments;
+        }
+
+        public function unRegisterEventHandler(...$arguments): void
+        {
+            self::$unregistered[] = $arguments;
+        }
+    }
+}
+
 namespace Bitrix\Main\Localization {
     class LanguageTable
     {
