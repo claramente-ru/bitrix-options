@@ -53,22 +53,31 @@ if (is_array($tabs) && $tabs) {
             continue;
         }
 
-        // Проверка уникальности кода вкладки
-        $checkTab = ClaramenteOptionTabsTable::getByCode($tab['code']);
         $currentTab = ClaramenteOptionTabsTable::getTabById((int)$tabId);
-        if ($currentTab->code != $tab['code'] && null !== $currentTab) {
-            CAdminMessage::ShowMessage('Ошибка. Вкладка с таким кодом уже существует');
+        if (null === $currentTab) {
+            continue;
+        }
+
+        // Проверка уникальности кода вкладки: код занят другой вкладкой
+        $checkTab = ClaramenteOptionTabsTable::getByCode((string)($tab['code'] ?? ''));
+        if (null !== $checkTab && $checkTab->id !== $currentTab->id) {
+            CAdminMessage::ShowMessage(sprintf('Ошибка. Вкладка с кодом %s уже существует', $tab['code']));
+            return;
         }
 
         // Обновим вкладку
         $updateTab = ClaramenteOptionTabsTable::update(
             $tabId,
             [
-                'NAME' => $tab['name'] ?? 'Без измени',
+                'NAME' => $tab['name'] ?? 'Без имени',
                 'SORT' => intval($tab['sort'] ?? 0) ?: 100,
                 'CODE' => $tab['code']
             ]
         );
+        if (! $updateTab->isSuccess()) {
+            CAdminMessage::ShowMessage('Ошибка. ' . implode(',', $updateTab->getErrorMessages()));
+            return;
+        }
     }
 }
 

@@ -402,6 +402,10 @@ namespace Claramente\Options\Entity {
 
         public static function update($id, $data)
         {
+            // Как в ORM: код обязателен
+            if (array_key_exists('CODE', $data) && (string)$data['CODE'] === '') {
+                return fakeResult(false, (int)$id, ['Не заполнено обязательное поле «CODE»']);
+            }
             $tab = self::$tabs[(int)$id] ?? null;
             if ($tab) {
                 self::$tabs[(int)$id] = new TabEntityStructure($tab->id, (string)($data['NAME'] ?? $tab->name), (string)($data['CODE'] ?? $tab->code), (int)($data['SORT'] ?? $tab->sort));
