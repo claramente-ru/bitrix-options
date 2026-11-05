@@ -29,15 +29,20 @@ if ($request->get('ID')) {
 // Редактирование опции
 $isNewOption = $currentOption === null;
 
-// При смене кода нужно убедиться, что такого кода нет
-if (! $isNewOption
-    && $option['code'] !== $currentOption->code
-    && ClaramenteOptionsTable::getByCode($option['code'], $option['site_id'])
-) {
-    CAdminMessage::ShowMessage(sprintf('Ошибка. Код опции %s уже существует', $option['code']));
+// «Не выбрано» в списке сайтов приходит пустой строкой, а в базе опция для всех сайтов хранится с SITE_ID = NULL
+$optionCode = trim((string)($option['code'] ?? ''));
+$optionSiteId = ! empty($option['site_id']) ? (string)$option['site_id'] : null;
+if ($optionCode === '') {
+    CAdminMessage::ShowMessage('Ошибка. Не указан код параметра');
     return;
-} elseif ($isNewOption && ClaramenteOptionsTable::getByCode($option['code'], $option['site_id'])) {
-    CAdminMessage::ShowMessage(sprintf('Ошибка. Код опции %s уже существует', $option['code']));
+}
+
+// При смене кода или сайта нужно убедиться, что такой пары код + сайт нет
+$codeOrSiteChanged = $isNewOption
+    || $optionCode !== $currentOption->code
+    || $optionSiteId !== $currentOption->siteId;
+if ($codeOrSiteChanged && ClaramenteOptionsTable::getByCode($optionCode, $optionSiteId)) {
+    CAdminMessage::ShowMessage(sprintf('Ошибка. Код опции %s уже существует', $optionCode));
     return;
 }
 
@@ -64,9 +69,9 @@ if (array_key_exists('hint', $option)) {
 $forAllLangNewValue = isset($option['single_value_for_all_lang']) && $option['single_value_for_all_lang'] === 'Y';
 $data = [
     'NAME' => $option['name'] ?? 'Без имени',
-    'CODE' => $option['code'],
+    'CODE' => $optionCode,
     'TYPE' => $option['type'],
-    'SITE_ID' => ! empty($option['site_id']) ? $option['site_id'] : null,
+    'SITE_ID' => $optionSiteId,
     'SORT' => $option['sort'] ?? 100,
     'TAB_ID' => isset($option['tab_id']) && intval($option['tab_id']) > 0 ? $option['tab_id'] : null,
     'IS_ADMIN_ONLY' => isset($option['is_admin_only']) && $option['is_admin_only'] === 'Y',
