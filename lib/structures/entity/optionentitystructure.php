@@ -92,6 +92,20 @@ final class OptionEntityStructure
     }
 
     /**
+     * Текст подсказки к параметру из SETTINGS. Пустая строка, если подсказки нет
+     * @return string
+     */
+    public function getHint(): string
+    {
+        $settings = is_string($this->settings) && $this->settings !== ''
+            ? @unserialize($this->settings, ['allowed_classes' => false])
+            : [];
+        $hint = is_array($settings) ? ($settings['hint'] ?? null) : null;
+
+        return is_string($hint) && trim($hint) !== '' ? $hint : '';
+    }
+
+    /**
      * Получить свойство опции
      * @return AbstractOption|null
      */

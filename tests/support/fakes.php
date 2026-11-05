@@ -163,6 +163,26 @@ namespace {
         return htmlspecialchars((string)$value, $flags, 'UTF-8', $doubleEncode);
     }
 
+    /**
+     * Как в Bitrix: декодируются только &lt; &gt; &quot; &apos; &amp;
+     */
+    function htmlspecialcharsback($value): string
+    {
+        return str_replace(['&lt;', '&gt;', '&quot;', '&apos;', '&amp;'], ['<', '>', '"', "'", '&'], (string)$value);
+    }
+
+    class CAdminMessage
+    {
+        public static array $messages = [];
+
+        public static function ShowMessage($message): void
+        {
+            self::$messages[] = is_array($message)
+                ? trim(($message['MESSAGE'] ?? '') . "\n" . ($message['DETAILS'] ?? ''))
+                : (string)$message;
+        }
+    }
+
     class RedirectException extends RuntimeException
     {
     }

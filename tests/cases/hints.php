@@ -8,6 +8,7 @@ use Claramente\Options\Admin\AdminForm;
 use Claramente\Options\Entity\ClaramenteOptionsTable;
 use Claramente\Options\Services\MigrationService;
 use Claramente\Options\Structures\Entity\OptionEntityStructure;
+use Claramente\Options\Types\AbstractOption;
 use Claramente\Options\Types\BoolOption;
 use Claramente\Options\Types\DateOption;
 use Claramente\Options\Types\FileOption;
@@ -57,6 +58,15 @@ function hintsAllTypes(): array
     ];
 }
 
+test('hints: опция читает подсказку из SETTINGS', function (): void {
+    assertSame('Текст', fixture(serialize(['hint' => 'Текст', 'size' => 30]))->getHint(), 'подсказка');
+    foreach ([null, '', 'not serialized', serialize([]), serialize(['hint' => '  ']), serialize(['hint' => ['x']])] as $settings) {
+        assertSame('', fixture($settings)->getHint(), var_export($settings, true));
+    }
+    $object = serialize(['hint' => new ArrayObject(['x'])]);
+    assertSame('', fixture($object)->getHint(), 'объект в настройках не восстанавливается');
+});
+
 test('hints: пустая или отсутствующая подсказка не меняет форму', function (): void {
     foreach (hintsAllTypes() as $type) {
         foreach ([null, serialize([]), serialize(['hint' => '']), serialize(['hint' => '  ']), serialize(['hint' => []])] as $settings) {
@@ -75,8 +85,8 @@ test('hints: подсказка выводится один раз и безоп
             $form = new CAdminForm();
             $type->getFormFieldHint('options[1]', $form, $option);
             $context = $type::getCode() . ($single ? '' : ' (по языкам)');
-            assertSame(1, count($form->fields), "одна строка подсказки: $context");
-            $html = $form->fields['options[1][hint]'];
+            assertSame(['hint_options[1]'], array_keys($form->fields), "одна строка подсказки, id не начинается с options: $context");
+            $html = $form->fields['hint_options[1]'];
             assertTrue(! str_contains($html, '<script>') && ! str_contains($html, '<a '), "нет исполняемого HTML: $context");
             assertTrue(str_contains($html, '&lt;script&gt;'), "теги выводятся текстом: $context");
             assertTrue(str_contains($html, '&#039;') && str_contains($html, '&quot;'), "кавычки экранированы: $context");
@@ -100,16 +110,18 @@ test('hints: общая форма выводит подсказку после 
         runAdminScript(__DIR__ . '/../../admin/pages/main.php', fakeUser(false), ['request' => new HttpRequest()]);
 
         $fields = AdminForm::$form->fields;
-        assertSame(['options[1]', 'options[1][hint]'], array_keys($fields), 'порядок поля и подсказки');
-        assertTrue(str_contains($fields['options[1][hint]'], 'Visible hint'), 'подсказка выведена');
+        assertSame(['options[1]', 'hint_options[1]'], array_keys($fields), 'порядок поля и подсказки');
+        assertTrue(str_contains($fields['hint_options[1]'], 'Visible hint'), 'подсказка выведена');
         assertSame($single ? 'single value' : 'multiple values', $fields['options[1]'], 'вывод значения типа не изменился');
     }
 });
 
 test('hints: подсказка создается, редактируется и очищается вместе с настройками типа', function (): void {
     foreach (['string', 'select', 'custom'] as $type) {
-        foreach (['new', 'edit', 'clear', 'legacy'] as $scenario) {
-            ClaramenteOptionsTable::$options = $scenario === 'new' ? [] : [1 => fixture()];
+        foreach (['new', 'edit', 'clear', 'legacy', 'legacy_keep'] as $scenario) {
+            ClaramenteOptionsTable::$options = $scenario === 'new' ? [] : [1 => fixture(
+                $scenario === 'legacy_keep' ? serialize(['hint' => 'Old hint']) : null
+            )];
             $post = [
                 'code' => 'sample',
                 'name' => 'Sample',
@@ -122,7 +134,7 @@ test('hints: подсказка создается, редактируется �
                     'values' => ['First', '', 'Second'],
                 ],
             ];
-            if ($scenario === 'legacy') {
+            if (in_array($scenario, ['legacy', 'legacy_keep'], true)) {
                 unset($post['hint']);
             }
             Application::$request = new HttpRequest(['option' => $post], $scenario === 'new' ? [] : ['ID' => 1]);
@@ -130,7 +142,12 @@ test('hints: подсказка создается, редактируется �
             runAdminScript(__DIR__ . '/../../admin/save/option.php', fakeUser(true));
 
             $saved = unserialize(ClaramenteOptionsTable::$options[1]->settings);
-            assertSame(in_array($scenario, ['clear', 'legacy'], true) ? '' : HINTS_SAMPLE, $saved['hint'] ?? '', "подсказка: $type/$scenario");
+            $expected = match ($scenario) {
+                'clear', 'legacy' => '',
+                'legacy_keep' => 'Old hint',
+                default => HINTS_SAMPLE,
+            };
+            assertSame($expected, $saved['hint'] ?? '', "подсказка: $type/$scenario");
             if ($type === 'select') {
                 assertSame([0 => 'First', 2 => 'Second'], $saved['values'], "элементы списка: $scenario");
             } elseif ($type === 'custom') {
@@ -140,6 +157,29 @@ test('hints: подсказка создается, редактируется �
             }
         }
     }
+});
+
+test('hints: подсказка в редакторе переживает htmlspecialcharsbx(htmlspecialcharsback()) в CAdminForm', function (): void {
+    foreach (["It's \"ok\"", '&amp; &lt;b&gt; &#039; &apos;', "a\\b\nc"] as $text) {
+        $prepared = htmlspecialchars($text, ENT_COMPAT | ENT_SUBSTITUTE, 'UTF-8');
+        $textareaHtml = htmlspecialcharsbx(htmlspecialcharsback($prepared));
+        assertSame($text, html_entity_decode($textareaHtml, ENT_QUOTES | ENT_HTML5, 'UTF-8'), 'текст в редакторе');
+    }
+});
+
+test('hints: подсказка длиннее лимита отклоняется до сохранения параметра', function (): void {
+    ClaramenteOptionsTable::$options = [1 => fixture()];
+    Application::$request = new HttpRequest(['option' => [
+        'code' => 'sample', 'name' => 'Sample', 'type' => 'string',
+        'hint' => str_repeat('я', AbstractOption::HINT_MAX_LENGTH + 1),
+    ]], ['ID' => 1]);
+    CAdminMessage::$messages = [];
+
+    runAdminScript(__DIR__ . '/../../admin/save/option.php', fakeUser(true));
+
+    assertSame(1, count(CAdminMessage::$messages), 'одно сообщение об ошибке');
+    assertTrue(str_contains(CAdminMessage::$messages[0], 'Подсказка длиннее'), 'текст ошибки');
+    assertSame(null, ClaramenteOptionsTable::$options[1]->settings, 'настройки не изменились');
 });
 
 test('hints: миграция переносит подсказку в SETTINGS без изменений', function (): void {

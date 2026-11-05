@@ -5,6 +5,7 @@ use Claramente\Options\Admin\AdminForm;
 use Claramente\Options\Entity\ClaramenteOptionsTable;
 use Claramente\Options\Services\MigrationService;
 use Claramente\Options\Services\OptionTypes;
+use Claramente\Options\Types\AbstractOption;
 use Sprint\Migration\VersionManager;
 
 /**
@@ -90,21 +91,11 @@ $tabControl->AddCheckBoxField(
 $tabControl->AddCheckBoxField('option[is_admin_only]', '🔒 Доступен только администраторам', false, ['Y', 'N'], $option?->isAdminOnly);
 
 // Общая подсказка не зависит от реализации настроек конкретного типа.
-$settings = $option ? unserialize(
-    $option->settings ?: 'a:0:{}',
-    [
-        'allowed_classes' => false,
-    ]
-) : [];
-$hint = is_string($settings['hint'] ?? null) ? $settings['hint'] : '';
+$hint = $option?->getHint() ?? '';
 $tabControl->AddTextField(
     'option[hint]',
-    'Подсказка (текст без HTML)',
-    // CAdminForm декодирует HTML-сущности перед подготовкой значения textarea.
-    \Bitrix\Main\Text\HtmlFilter::encode(
-        $hint,
-        ENT_QUOTES | ENT_SUBSTITUTE
-    ),
+    sprintf('💡 Подсказка (текст без HTML, до %d символов)', AbstractOption::HINT_MAX_LENGTH),
+    htmlspecialchars($hint, ENT_COMPAT | ENT_SUBSTITUTE, 'UTF-8'),
     [
         'cols' => 60,
         'rows' => 4,

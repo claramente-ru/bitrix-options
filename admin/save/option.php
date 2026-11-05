@@ -5,6 +5,7 @@ global $USER;
 use Bitrix\Main\Application;
 use Claramente\Options\Entity\ClaramenteOptionsTable;
 use Claramente\Options\Services\OptionTypes;
+use Claramente\Options\Types\AbstractOption;
 
 if (! $USER->IsAdmin()) {
     return;
@@ -40,6 +41,20 @@ if (null === $optionType) {
     CAdminMessage::ShowMessage('Ошибка. Свойство опции не найдено');
     return;
 }
+
+// Подсказка
+$hint = null;
+if (array_key_exists('hint', $option)) {
+    $hint = is_string($option['hint']) ? $option['hint'] : '';
+    if (mb_strlen($hint) > AbstractOption::HINT_MAX_LENGTH) {
+        CAdminMessage::ShowMessage(sprintf(
+            'Ошибка. Подсказка длиннее %d символов',
+            AbstractOption::HINT_MAX_LENGTH
+        ));
+        return;
+    }
+}
+
 $forAllLangNewValue = isset($option['single_value_for_all_lang']) && $option['single_value_for_all_lang'] === 'Y';
 $data = [
     'NAME' => $option['name'] ?? 'Без имени',
@@ -70,10 +85,7 @@ $toUpdate['settings'] = $optionType->beforeSaveSettings(
     $request,
     ClaramenteOptionsTable::getOptionById($save->getId())
 );
-if (array_key_exists(
-    'hint',
-    $option
-)) {
+if (null !== $hint || $currentOption !== null) {
     $settings = unserialize(
         $toUpdate['settings'] ?: 'a:0:{}',
         [
@@ -82,8 +94,10 @@ if (array_key_exists(
     );
     $settings = is_array($settings) ? $settings : [];
     unset($settings['hint']);
-    if (is_string($option['hint']) && trim($option['hint']) !== '') {
-        $settings['hint'] = $option['hint'];
+    // Если поле подсказки не передано (собственная форма без поля), сохраним прежнюю подсказку
+    $hintToSave = $hint ?? ($currentOption?->getHint() ?? '');
+    if (trim($hintToSave) !== '') {
+        $settings['hint'] = $hintToSave;
     }
     $toUpdate['settings'] = serialize($settings);
 }

@@ -16,6 +16,11 @@ use CAdminForm;
 abstract class AbstractOption
 {
     /**
+     * Максимальная длина подсказки в символах
+     */
+    public const HINT_MAX_LENGTH = 2000;
+
+    /**
      * Название свойства
      * @return string
      */
@@ -151,22 +156,25 @@ abstract class AbstractOption
 
     /**
      * Подсказка к полю, общая для всех типов и языков.
+     * Строка формы получает id с префиксом hint_, чтобы скрипт ссылок редактирования
+     * (tr[id^='tr_options']) не принимал ее за поле значения.
+     * @param string $postName
+     * @param CAdminForm $form
+     * @param OptionEntityStructure $option
+     * @return void
      */
     public function getFormFieldHint(
         string $postName,
         CAdminForm &$form,
         OptionEntityStructure $option
     ): void {
-        $hint = $this->getSettingValue($option, 'hint');
-        if (!is_string($hint) || trim($hint) === '') {
+        $hint = $option->getHint();
+        if ($hint === '') {
             return;
         }
 
         $form->AddViewField(
-            sprintf(
-                '%s[hint]',
-                $postName
-            ),
+            'hint_' . $postName,
             '',
             sprintf(
                 '<p class="adm-info-message">%s</p>',
