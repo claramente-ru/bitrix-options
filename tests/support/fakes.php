@@ -111,6 +111,21 @@ namespace Bitrix\Main {
     }
 }
 
+namespace Bitrix\Main\Localization {
+    class LanguageTable
+    {
+        public static function getList(array $parameters = []): object
+        {
+            return new class {
+                public function fetchAll(): array
+                {
+                    return [['ID' => 'ru', 'NAME' => 'Русский'], ['ID' => 'en', 'NAME' => 'English']];
+                }
+            };
+        }
+    }
+}
+
 namespace Bitrix\Main\Type {
     class Date
     {
@@ -425,6 +440,14 @@ namespace {
             return null;
         }
 
+        /**
+         * Как в Bitrix: значение выводится через htmlspecialcharsbx(htmlspecialcharsback($value))
+         */
+        public function AddTextField($id, $label, $value, $arParams = [], $required = false): void
+        {
+            $this->fields[$id] = '<textarea>' . htmlspecialcharsbx(htmlspecialcharsback((string)$value)) . '</textarea>';
+        }
+
         public function AddViewField($id, $content, $html, $required = false): void
         {
             $this->fields[$id] = $html;
@@ -493,6 +516,14 @@ namespace {
     function htmlspecialcharsbx($value, $flags = ENT_COMPAT, $doubleEncode = true): string
     {
         return htmlspecialchars((string)$value, $flags, 'UTF-8', $doubleEncode);
+    }
+
+    /**
+     * Приближенно, как в Bitrix: уже закодированные сущности не кодируются повторно
+     */
+    function htmlspecialcharsex($value): string
+    {
+        return htmlspecialchars((string)$value, ENT_COMPAT, 'UTF-8', false);
     }
 
     /**

@@ -42,7 +42,7 @@ class TextOption extends AbstractOption
         $form->AddTextField(
             id: $this->getPostOptionId($postName, $option),
             label: $this->getOptionLabel($option),
-            value: $option->value,
+            value: htmlspecialchars((string)$option->value, ENT_COMPAT | ENT_SUBSTITUTE, 'UTF-8'),
             arParams: [
                 'cols' => 60,
                 'rows' => 10
@@ -125,7 +125,8 @@ class TextOption extends AbstractOption
      */
     protected function getFieldText(string $name, ?string $value): string
     {
-        $value = is_string($value) ? htmlspecialcharsbx(htmlspecialcharsback($value)) : null;
+        // Без htmlspecialcharsback: введенные текстом сущности (&amp;, &lt;) сохраняются без изменений
+        $value = is_string($value) ? htmlspecialcharsbx($value) : null;
 
         return '<textarea name="' . $name . '" cols="60" rows="10">' . $value . '</textarea>';
     }
