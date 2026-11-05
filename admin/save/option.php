@@ -3,6 +3,7 @@
 global $USER;
 
 use Bitrix\Main\Application;
+use Bitrix\Main\Type\DateTime;
 use Claramente\Options\Entity\ClaramenteOptionsTable;
 use Claramente\Options\Services\OptionTypes;
 use Claramente\Options\Types\AbstractOption;
@@ -70,6 +71,8 @@ $data = [
     'TAB_ID' => isset($option['tab_id']) && intval($option['tab_id']) > 0 ? $option['tab_id'] : null,
     'IS_ADMIN_ONLY' => isset($option['is_admin_only']) && $option['is_admin_only'] === 'Y',
     'SINGLE_VALUE_FOR_ALL_LANG' => $forAllLangNewValue,
+    // В PostgreSQL нет ON UPDATE CURRENT_TIMESTAMP, поэтому время изменения задается явно
+    'UPDATED_AT' => new DateTime(),
 ];
 
 // Редактирование опции

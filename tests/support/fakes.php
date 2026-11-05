@@ -190,6 +190,7 @@ namespace Claramente\Options\Entity {
             'NAME' => 'name', 'CODE' => 'code', 'VALUE' => 'value', 'TYPE' => 'type', 'SETTINGS' => 'settings',
             'SORT' => 'sort', 'TAB_ID' => 'tabId', 'SITE_ID' => 'siteId',
             'SINGLE_VALUE_FOR_ALL_LANG' => 'singleValueForAllLang', 'IS_ADMIN_ONLY' => 'isAdminOnly',
+            'UPDATED_AT' => 'updatedAt',
         ];
 
         public static function getOptionById($id)

@@ -85,6 +85,8 @@ final class OptionEntityStructure
                     value: $value,
                     multiple: ! $this->singleValueForAllLang
                 ),
+                // В PostgreSQL нет ON UPDATE CURRENT_TIMESTAMP, поэтому время изменения задается явно
+                'UPDATED_AT' => new DateTime(),
             ]
         );
 

@@ -1,4 +1,4 @@
--- Сущность options
+-- Сущность tabs
 CREATE TABLE IF NOT EXISTS `claramente_option_tabs`
 (
     `ID` int        NOT NULL AUTO_INCREMENT,
@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS `claramente_option_tabs`
     UNIQUE KEY `CODE` (`CODE`)
 );
 
--- Сущность tabs
+-- Сущность options
 CREATE TABLE IF NOT EXISTS `claramente_options` (
     `ID` int NOT NULL AUTO_INCREMENT,
     `NAME` varchar(255) NOT NULL,
