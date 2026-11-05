@@ -19,6 +19,10 @@ if ($request->isPost()) {
 $form = new AdminForm();
 $tabControl = $form->getForm('claramente_options_form', $form->getFormTabs());
 $tabControl->SetShowSettings(false);
+// Защита от CSRF: токен сессии проверяется при сохранении
+$tabControl->BeginEpilogContent();
+echo bitrix_sessid_post();
+$tabControl->EndEpilogContent();
 $tabControl->Begin([
     'FORM_ACTION' => $request->getRequestUri()
 ]);

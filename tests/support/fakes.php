@@ -32,6 +32,11 @@ namespace Bitrix\Main {
         {
             return $this->query[$name] ?? null;
         }
+
+        public function getFile($name)
+        {
+            return null;
+        }
     }
 
     class Application
@@ -58,6 +63,10 @@ namespace Bitrix\Main {
 namespace Bitrix\Main\Type {
     class DateTime
     {
+        public function format(string $format): string
+        {
+            return '00:00:00 01.01.2026';
+        }
     }
 }
 
@@ -84,11 +93,26 @@ namespace Claramente\Options\Admin {
             return self::$options;
         }
 
-        public function getForm($name, $tabs): CAdminForm
+        public function getForm($name, $tabs, $canExpand = true, $denyAutosave = false): CAdminForm
         {
             self::$form = new CAdminForm();
 
             return self::$form;
+        }
+
+        public function collectTab(string $name, string $div): array
+        {
+            return ['TAB' => $name, 'DIV' => $div];
+        }
+
+        public function getSelectTabs(): array
+        {
+            return [0 => 'Не выбрано'];
+        }
+
+        public function getSelectSites(): array
+        {
+            return ['' => 'Не выбрано'];
         }
     }
 }
@@ -259,6 +283,32 @@ namespace {
         public function AddViewField($id, $content, $html, $required = false): void
         {
             $this->fields[$id] = $html;
+        }
+    }
+
+    /**
+     * Токен сессии: проверка проходит, пока тест не выставит $GLOBALS['TEST_SESSID_VALID'] = false
+     */
+    function check_bitrix_sessid(): bool
+    {
+        return ($GLOBALS['TEST_SESSID_VALID'] ?? true) === true;
+    }
+
+    function bitrix_sessid_post(): string
+    {
+        return '<input type="hidden" name="sessid" value="test">';
+    }
+
+    function bitrix_sessid_get(): string
+    {
+        return 'sessid=test';
+    }
+
+    class CModule
+    {
+        public static function IncludeModule($module): bool
+        {
+            return false;
         }
     }
 

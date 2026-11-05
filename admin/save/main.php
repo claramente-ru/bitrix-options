@@ -10,6 +10,11 @@ if (! $USER->IsAdmin()) {
     return;
 }
 
+if (! check_bitrix_sessid()) {
+    CAdminMessage::ShowMessage('Ошибка. Сессия истекла, обновите страницу и повторите сохранение');
+    return;
+}
+
 $request = Application::getInstance()->getContext()->getRequest();
 
 /**

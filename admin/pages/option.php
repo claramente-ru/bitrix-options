@@ -39,14 +39,21 @@ if (! $isNewOption) {
     }
 }
 
+// Удаление и создание миграции выполняются только по ссылке с токеном сессии (защита от CSRF)
+$isActionRequest = $request->get('delete') === 'Y' || $request->get('migrate') === 'Y';
+$isActionAllowed = ! $isActionRequest || check_bitrix_sessid();
+if (! $isActionAllowed) {
+    CAdminMessage::ShowMessage('Ошибка. Сессия истекла, обновите страницу и повторите действие');
+}
+
 // Действие: Удаление опции
-if ($request->get('delete') === 'Y' && is_numeric($request->get('ID'))) {
+if ($isActionAllowed && $request->get('delete') === 'Y' && is_numeric($request->get('ID'))) {
     ClaramenteOptionsTable::delete((int)$request->get('ID'));
     LocalRedirect('/bitrix/admin/claramente_options.php?lang=' . LANG);
 }
 
 // Действие: Миграция опции
-if ($request->get('migrate') === 'Y' && is_numeric($request->get('ID'))) {
+if ($isActionAllowed && $request->get('migrate') === 'Y' && is_numeric($request->get('ID'))) {
     $optionService = new MigrationService();
     $optionMigrate = $optionService->createMigration((int)$request->get('ID'));
     if (! $optionMigrate) {
@@ -65,6 +72,10 @@ $tabControl = $form->getForm(
     denyAutosave: true
 );
 $tabControl->SetShowSettings(false);
+// Защита от CSRF: токен сессии проверяется при сохранении
+$tabControl->BeginEpilogContent();
+echo bitrix_sessid_post();
+$tabControl->EndEpilogContent();
 $tabControl->Begin([
     'FORM_ACTION' => $request->getRequestUri()
 ]);
@@ -118,7 +129,7 @@ $buttonDelete = '';
 if (! $isNewOption) {
     $text = 'Удалить опцию? Это действие нельзя будет отменить';
     $buttonDelete = '
-    <a href="/bitrix/admin/claramente_options.php?lang=' . LANG . '&page=option&ID=' . $option->id . '&delete=Y" onclick="return confirm(\'' . $text. '\')">
+    <a href="/bitrix/admin/claramente_options.php?lang=' . LANG . '&page=option&ID=' . $option->id . '&delete=Y&' . bitrix_sessid_get() . '" onclick="return confirm(\'' . $text. '\')">
 <input type="button" class="adm-btn" value="🗑️ Удалить">
 </a>';
 }
@@ -126,7 +137,7 @@ if (! $isNewOption) {
 $buttonMigration = '';
 if ($migrationModuleEnabled) {
     $text = 'Создать миграцию в модуле sprint.migration? Значение опции будет перенесено вместе с миграцией';
-    $buttonMigration = '<a href="/bitrix/admin/claramente_options.php?lang=' . LANG . '&page=option&ID=' . $option->id . '&migrate=Y" onclick="return confirm(\'' . $text. '\')">
+    $buttonMigration = '<a href="/bitrix/admin/claramente_options.php?lang=' . LANG . '&page=option&ID=' . $option->id . '&migrate=Y&' . bitrix_sessid_get() . '" onclick="return confirm(\'' . $text. '\')">
 <input type="button" class="adm-btn" value="💾️ Создать миграцию">
 </a>';
 }
