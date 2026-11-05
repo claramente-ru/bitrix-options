@@ -250,7 +250,7 @@ class FileOption extends AbstractOption
         $html = CFile::InputFile($name, 20, $value, bShowNotes: false);
         if ($value) {
             $file = CFile::GetFileArray($value);
-            $isImage = $file && (CFile::IsImage($file['SRC']) || str_contains($file['CONTENT_TYPE'], 'image'));
+            $isImage = $file && (CFile::IsImage($file['SRC']) || str_contains((string)($file['CONTENT_TYPE'] ?? ''), 'image'));
             $showFile = $isImage === true ? CFile::ShowImage($value, 150, 150, "border=0", "", true) : CFile::ShowFile($value, 150, 150, "border=0", "", true);
             $html .= '<div class="adm-detail-file-image">' . $showFile . "</div>";
 

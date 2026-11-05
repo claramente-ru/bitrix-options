@@ -35,9 +35,7 @@ class DateOption extends AbstractOption
      */
     public function getValue(OptionEntityStructure $option): ?Date
     {
-        $timestamp = strtotime($option->value);
-
-        return $timestamp ? Date::createFromTimestamp($timestamp) : null;
+        return self::toDate($option->value);
     }
 
     /**
@@ -56,14 +54,28 @@ class DateOption extends AbstractOption
         if (is_array($values) && ! empty($values)) {
             // Приведение каждого значения к дате
             foreach ($values as &$value) {
-                $timestamp = strtotime($value['value']);
-                $value['value'] = $timestamp ? Date::createFromTimestamp($timestamp) : null;
+                $value['value'] = self::toDate(is_array($value) ? ($value['value'] ?? null) : null);
             }
             return $values;
         }
 
         // Если значение одно для всех языков, вернем его как множественное: одинаковое для каждого языка
         return self::getSingleValueForAllLang($option);
+    }
+
+    /**
+     * Дата из строки БД. Null для пустого или некорректного значения
+     * @param mixed $value
+     * @return Date|null
+     */
+    private static function toDate(mixed $value): ?Date
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+        $timestamp = strtotime($value);
+
+        return $timestamp ? Date::createFromTimestamp($timestamp) : null;
     }
 
     /**

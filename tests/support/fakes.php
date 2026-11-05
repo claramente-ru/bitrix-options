@@ -112,6 +112,18 @@ namespace Bitrix\Main {
 }
 
 namespace Bitrix\Main\Type {
+    class Date
+    {
+        public function __construct(public int $timestamp = 0)
+        {
+        }
+
+        public static function createFromTimestamp(int $timestamp): static
+        {
+            return new static($timestamp);
+        }
+    }
+
     class DateTime
     {
         public function format(string $format): string
@@ -435,6 +447,39 @@ namespace {
     function bitrix_sessid_get(): string
     {
         return 'sessid=test';
+    }
+
+    /**
+     * Файлы Bitrix: GetFileArray() возвращает записи из $files
+     */
+    class CFile
+    {
+        public static array $files = [];
+
+        public static function GetFileArray($id): array|false
+        {
+            return self::$files[(int)$id] ?? false;
+        }
+
+        public static function IsImage($src): bool
+        {
+            return str_ends_with((string)$src, '.png');
+        }
+
+        public static function InputFile(...$args): string
+        {
+            return '<input type="file">';
+        }
+
+        public static function ShowImage($id, ...$args): string
+        {
+            return '<img data-file="' . $id . '">';
+        }
+
+        public static function ShowFile($id, ...$args): string
+        {
+            return '<a data-file="' . $id . '">';
+        }
     }
 
     class CModule
