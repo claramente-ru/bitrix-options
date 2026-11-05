@@ -137,9 +137,9 @@ if (! $isNewOption) {
 <input type="button" class="adm-btn" value="🗑️ Удалить">
 </a>';
 }
-// Кнопка "Создать миграцию"
+// Кнопка "Создать миграцию" (только для сохраненной опции)
 $buttonMigration = '';
-if ($migrationModuleEnabled) {
+if ($migrationModuleEnabled && ! $isNewOption) {
     $text = 'Создать миграцию в модуле sprint.migration? Значение опции будет перенесено вместе с миграцией';
     $buttonMigration = '<a href="/bitrix/admin/claramente_options.php?lang=' . LANG . '&page=option&ID=' . $option->id . '&migrate=Y&' . bitrix_sessid_get() . '" onclick="return confirm(\'' . $text. '\')">
 <input type="button" class="adm-btn" value="💾️ Создать миграцию">

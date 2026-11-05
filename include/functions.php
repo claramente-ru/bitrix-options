@@ -102,7 +102,7 @@ if (! function_exists('cm_option_filled')) {
     {
         $option = ClaramenteOptionsTable::getByCode($code, $siteId);
 
-        return null !== $option && ! empty($option->value);
+        return null !== $option && null !== $option->value && $option->value !== '';
     }
 }
 

@@ -472,6 +472,14 @@ namespace {
     {
         public array $fields = [];
 
+        /** HTML дополнительных кнопок формы */
+        public string $buttons = '';
+
+        public function Buttons($params = false, $additionalHtml = ''): void
+        {
+            $this->buttons .= (string)$additionalHtml;
+        }
+
         public function __call($name, $arguments)
         {
             return null;
@@ -552,9 +560,12 @@ namespace {
 
     class CModule
     {
+        /** Установленные модули */
+        public static array $modules = [];
+
         public static function IncludeModule($module): bool
         {
-            return false;
+            return in_array($module, self::$modules, true);
         }
     }
 
