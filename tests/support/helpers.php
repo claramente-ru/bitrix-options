@@ -155,3 +155,30 @@ function prop(object $object, string $name): mixed
 {
     return (new ReflectionProperty($object, $name))->getValue($object);
 }
+
+/**
+ * Настоящий ClaramenteOptionsTable под другим именем для проверки запросов самой таблицы
+ * (обычно таблицу заменяет заглушка из fakes.php). Запросы ORM выполняет заглушка DataManager
+ */
+function realOptionsTable(): string
+{
+    $class = 'Claramente\\Options\\Entity\\RealOptionsTable';
+    if (! class_exists($class, false)) {
+        $source = file_get_contents(__DIR__ . '/../../lib/entity/claramenteoptionstable.php');
+        eval(substr(str_replace('final class ClaramenteOptionsTable ', 'final class RealOptionsTable ', $source), 5));
+    }
+
+    return $class;
+}
+
+/**
+ * Строка таблицы опций для заглушки запросов ORM
+ */
+function optionRow(int $id, string $code, ?string $siteId, string $value): array
+{
+    return [
+        'ID' => $id, 'NAME' => $code, 'CODE' => $code, 'VALUE' => $value, 'TYPE' => 'string', 'SETTINGS' => null,
+        'SORT' => 100, 'TAB_ID' => null, 'SITE_ID' => $siteId, 'SINGLE_VALUE_FOR_ALL_LANG' => true,
+        'IS_ADMIN_ONLY' => false, 'CREATED_AT' => new DateTime(), 'UPDATED_AT' => new DateTime(),
+    ];
+}

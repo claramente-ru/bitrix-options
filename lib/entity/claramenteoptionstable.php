@@ -168,8 +168,9 @@ final class ClaramenteOptionsTable extends DataManager
             $option = $option->fetch();
         }
         if (isset($option['VALUE']) && ! $option['SINGLE_VALUE_FOR_ALL_LANG'] && ! $getForAllLanguages) {
-            $option['VALUE'] = unserialize($option['VALUE'], ['allowed_classes' => false]);
-            $option['VALUE'] = array_column($option['VALUE'], 'value', 'lang')[LANGUAGE_ID] ?? '';
+            $values = @unserialize((string)$option['VALUE'], ['allowed_classes' => false]);
+            $value = is_array($values) ? (array_column($values, 'value', 'lang')[LANGUAGE_ID] ?? '') : '';
+            $option['VALUE'] = is_scalar($value) ? (string)$value : '';
         }
 
         return $option ? OptionEntityStructure::fromArray($option) : null;

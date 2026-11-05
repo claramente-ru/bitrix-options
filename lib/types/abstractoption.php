@@ -111,11 +111,15 @@ abstract class AbstractOption
 
         if ($multiple) {
             // Для множественных свойств (отдельное значение для каждого языка) сериализуем данные
+            if (! is_array($value)) {
+                return null;
+            }
             $seenLangs = [];
             foreach ($value as $key => $optionItem) {
                 // Удаляем пустые значения
                 if ($optionItem['value'] === '') {
                     unset($value[$key]);
+                    continue;
                 }
                 // Удаляем значение, если задано больше одного значения для языка
                 if (in_array($optionItem['lang'], $seenLangs)) {

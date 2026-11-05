@@ -49,23 +49,32 @@ if (! function_exists('cm_option_set')) {
     /**
      * Установка нового значения опции
      * Внимание: опция должна существовать
+     * При ошибке возвращается false, текст ошибки — в $error
+     * Для опции с отдельными значениями по языкам передавать массив [['value' => ..., 'lang' => 'ru'], ...]
      * @param string $code
      * @param string|null $siteId
      * @param mixed|null $value
+     * @param string|null $error
      * @return bool
      */
     function cm_option_set(
         string  $code,
         ?string $siteId = null,
-        mixed   $value = null
+        mixed   $value = null,
+        ?string &$error = null
     ): bool
     {
+        $error = null;
         $option = ClaramenteOptionsTable::getByCode($code, $siteId);
-        if (! $option || ! $option->getOptionType()) {
+        if (! $option) {
+            $error = sprintf('Опция %s не найдена', $code);
             return false;
         }
 
-        return $option->setValue($value);
+        $result = $option->setValue($value);
+        $error = $option->getLastError();
+
+        return $result;
     }
 }
 

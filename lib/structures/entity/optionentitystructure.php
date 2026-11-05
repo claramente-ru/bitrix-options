@@ -14,6 +14,12 @@ use Claramente\Options\Services\OptionTypes;
 final class OptionEntityStructure
 {
     /**
+     * Ошибка последнего сохранения значения
+     * @var string|null
+     */
+    private ?string $lastError = null;
+
+    /**
      * @param int $id
      * @param string $name
      * @param string $code
@@ -72,18 +78,37 @@ final class OptionEntityStructure
 
     /**
      * Установка нового значения
+     * При ошибке значение не сохраняется, текст ошибки доступен через @see self::getLastError()
      * @param mixed $value
      * @return bool
      */
     public function setValue(mixed $value): bool
     {
+        $this->lastError = null;
+        $optionType = $this->getOptionType();
+        if (null === $optionType) {
+            $this->lastError = sprintf('Ошибка конфигурации: тип данных %s опции %s не найден', $this->type, $this->code);
+            return false;
+        }
+
+        $multiple = ! $this->singleValueForAllLang;
+        // Для отдельных значений по языкам ожидается массив [['value' => ..., 'lang' => ...], ...]
+        if ($multiple && ! is_array($value) && null !== $value) {
+            $this->lastError = sprintf(
+                'Ошибка вызова: опция %s хранит значения по языкам, ожидается массив [[\'value\' => ..., \'lang\' => ...]], передан %s',
+                $this->code,
+                get_debug_type($value)
+            );
+            return false;
+        }
+
         $update = ClaramenteOptionsTable::update(
             $this->id,
             [
-                'value' => $this->getOptionType()->getValueBeforeSave(
+                'value' => $optionType->getValueBeforeSave(
                     option: $this,
                     value: $value,
-                    multiple: ! $this->singleValueForAllLang
+                    multiple: $multiple
                 ),
                 // В PostgreSQL нет ON UPDATE CURRENT_TIMESTAMP, поэтому время изменения задается явно
                 'UPDATED_AT' => new DateTime(),
@@ -91,7 +116,20 @@ final class OptionEntityStructure
         );
         ClaramenteOptionsTable::clearPreloader();
 
+        if (! $update->isSuccess()) {
+            $this->lastError = implode(', ', $update->getErrorMessages());
+        }
+
         return $update->isSuccess();
+    }
+
+    /**
+     * Текст ошибки последнего вызова @see self::setValue()
+     * @return string|null
+     */
+    public function getLastError(): ?string
+    {
+        return $this->lastError;
     }
 
     /**
@@ -132,7 +170,7 @@ final class OptionEntityStructure
      */
     public function getValuesForLangs(): array
     {
-        return $this->getOptionType()?->getValuesForLangs($this);
+        return $this->getOptionType()?->getValuesForLangs($this) ?? [];
     }
 
     /**

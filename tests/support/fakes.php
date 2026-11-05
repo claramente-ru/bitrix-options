@@ -402,6 +402,7 @@ namespace Sprint\Migration\Exceptions {
 
 namespace {
     const LANG = 'ru';
+    const LANGUAGE_ID = 'ru';
 
     class CAdminForm
     {
