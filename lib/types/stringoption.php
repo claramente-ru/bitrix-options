@@ -5,6 +5,7 @@ namespace Claramente\Options\Types;
 
 use Bitrix\Main\HttpRequest;
 use CAdminForm;
+use Claramente\Options\Helpers\HtmlHelper;
 use Claramente\Options\Structures\Entity\OptionEntityStructure;
 
 /**
@@ -58,6 +59,22 @@ class StringOption extends AbstractOption
     }
 
     /**
+     * В значении сохраняется только безопасный HTML
+     * @param OptionEntityStructure $option
+     * @param mixed $value
+     * @param bool $multiple
+     * @return string|null
+     */
+    public function getValueBeforeSave(
+        OptionEntityStructure $option,
+        mixed                 $value,
+        bool                  $multiple = false,
+    ): ?string
+    {
+        return parent::getValueBeforeSave($option, $this->sanitizeValue($value, $multiple), $multiple);
+    }
+
+    /**
      * Вывод свойства в административном разделе
      * @param string $postName
      * @param CAdminForm $form
@@ -81,7 +98,7 @@ class StringOption extends AbstractOption
         // Шапка
         echo $this->getFieldHeader($option);
         // Редактирование поле
-        echo '<input type="text" name="' . htmlspecialcharsbx($postName) . '[value]" size="' . $size. '" value="' . htmlspecialcharsbx($option->value) . '"' . $pattern . '>';
+        echo '<input type="text" name="' . htmlspecialcharsbx($postName) . '[value]" size="' . $size. '" value="' . htmlspecialcharsbx(HtmlHelper::decodeForForm($option->value)) . '"' . $pattern . '>';
         // Готовое решение для разрешенных символов
         $readyRegex = $this->getSettingValue($option, 'ready_regex');
         if ($readyRegex && isset($this::FIELD_CHECK_SELECT[$readyRegex])) {
@@ -156,7 +173,7 @@ class StringOption extends AbstractOption
         <td>" . $this->getFieldInput(
                 $fieldId,
                 $params['size'] ?? $this::DEFAULT_SIZE,
-                is_string($value['value'] ?? null) ? htmlspecialchars($value['value']) : null
+                is_string($value['value'] ?? null) ? htmlspecialchars(HtmlHelper::decodeForForm($value['value'])) : null
             ) . "</td>
         <td>" . $this->getLanguageDropdown($selectFieldId, $value['lang'] ?? null) . "</td>
     </tr>";

@@ -558,6 +558,80 @@ namespace {
         }
     }
 
+    /**
+     * Упрощенная замена CBXSanitizer: удаляет script/iframe с содержимым, обработчики on* и javascript: в ссылках,
+     * как Bitrix кодирует текст между тегами (htmlspecialchars, ApplyDoubleEncode)
+     * Запоминает настройки вызова; поведение настоящего санитайзера проверяется в Bitrix
+     */
+    class CBXSanitizer
+    {
+        public const SECURE_LEVEL_HIGH = 0;
+        public const SECURE_LEVEL_MIDDLE = 1;
+        public const SECURE_LEVEL_LOW = 2;
+
+        /** Настройки и HTML каждого вызова SanitizeHtml() */
+        public static array $calls = [];
+
+        private array $settings = [
+            'level' => null, 'htmlSpecChars' => true, 'doubleEncode' => true,
+            'deleteSanitized' => false, 'deleteWithContent' => [], 'tags' => [],
+        ];
+
+        public function SetLevel($level): void
+        {
+            $this->settings['level'] = $level;
+        }
+
+        public function UpdateTags(array $tags): void
+        {
+            $this->settings['tags'] = $tags;
+        }
+
+        public function ApplyHtmlSpecChars($apply): void
+        {
+            // Как в Bitrix: вызов с false устарел и выдает предупреждение
+            if (! $apply) {
+                trigger_error('It is strongly not recommended to use \\CBXSanitizer::ApplyHtmlSpecChars(false)', E_USER_WARNING);
+            }
+            $this->settings['htmlSpecChars'] = (bool)$apply;
+        }
+
+        public function ApplyDoubleEncode($apply = true): void
+        {
+            $this->settings['doubleEncode'] = (bool)$apply;
+        }
+
+        public function DeleteSanitizedTags($apply = true): void
+        {
+            $this->settings['deleteSanitized'] = (bool)$apply;
+        }
+
+        public function setDelTagsWithContent(array $tags): void
+        {
+            $this->settings['deleteWithContent'] = $tags;
+        }
+
+        public function SanitizeHtml($html): string
+        {
+            self::$calls[] = $this->settings + ['html' => (string)$html];
+            $html = preg_replace('~<(script|iframe)\b.*?</\1>~is', '', (string)$html);
+            $html = preg_replace('~\s+on[a-z]+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)~i', '', $html);
+            $html = preg_replace('~href\s*=\s*"javascript:[^"]*"~i', '', $html);
+            if (! $this->settings['htmlSpecChars']) {
+                return $html;
+            }
+            // Как в Bitrix: теги — до первого «>», остальное — текст
+            $parts = preg_split('/(<[^<>]+>)/u', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
+            foreach ($parts as $i => &$part) {
+                if ($i % 2 === 0) {
+                    $part = htmlspecialchars($part, ENT_QUOTES, 'UTF-8', $this->settings['doubleEncode']);
+                }
+            }
+
+            return implode('', $parts);
+        }
+    }
+
     class CModule
     {
         /** Установленные модули */

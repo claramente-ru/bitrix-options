@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Claramente\Options\Types;
 
 use Bitrix\Main\HttpRequest;
+use Claramente\Options\Helpers\HtmlHelper;
 use Claramente\Options\Structures\Entity\OptionEntityStructure;
 use CAdminForm;
 
@@ -62,7 +63,15 @@ class StringsOption extends AbstractOption
         bool                  $multiple = false,
     ): ?string
     {
-       return is_array($value) ? serialize($value) : null;
+        if (! is_array($value)) {
+            return null;
+        }
+
+        // В каждой строке сохраняется только безопасный HTML
+        return serialize(array_map(
+            static fn($item) => is_string($item) ? HtmlHelper::sanitize($item) : $item,
+            $value
+        ));
     }
 
     /**
@@ -91,7 +100,7 @@ class StringsOption extends AbstractOption
         echo $this->getFieldHeader($option);
         for ($i = 0; $i < $numberFields; $i++) {
             $fieldId = sprintf('%s[%d]', $postName, $i);
-            echo $this->getFieldInput($fieldId, is_string($values[$i] ?? null) ? htmlspecialchars($values[$i]) : null);
+            echo $this->getFieldInput($fieldId, is_string($values[$i] ?? null) ? htmlspecialchars(HtmlHelper::decodeForForm($values[$i])) : null);
             // Перенос строк <br>
             if ($i > 0 && ($i + 1) % $numberSplitFields === 0) {
                 echo '<br><br>';

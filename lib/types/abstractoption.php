@@ -5,6 +5,7 @@ namespace Claramente\Options\Types;
 
 use Bitrix\Main\HttpRequest;
 use Bitrix\Main\Localization\LanguageTable;
+use Claramente\Options\Helpers\HtmlHelper;
 use Claramente\Options\Helpers\LangHelper;
 use Claramente\Options\Helpers\SiteHelper;
 use Claramente\Options\Structures\Entity\OptionEntityStructure;
@@ -135,6 +136,30 @@ abstract class AbstractOption
         }
 
         return null;
+    }
+
+    /**
+     * Безопасный HTML в значении из формы или кода: одно значение или значения по языкам
+     * @param mixed $value
+     * @param bool $multiple
+     * @return mixed
+     */
+    protected function sanitizeValue(mixed $value, bool $multiple): mixed
+    {
+        if (is_string($value)) {
+            return HtmlHelper::sanitize($value);
+        }
+        if (! is_array($value)) {
+            return $value;
+        }
+        $items = $multiple ? $value : [$value];
+        foreach ($items as &$item) {
+            if (is_array($item) && is_string($item['value'] ?? null)) {
+                $item['value'] = HtmlHelper::sanitize($item['value']);
+            }
+        }
+
+        return $multiple ? $items : $items[0];
     }
 
     /**
