@@ -11,8 +11,7 @@
  */
 use Claramente\Options\Services\MigrationService;
 
-$params = $this->getVersionConfig()->getList();
-$params = $params[array_key_first($params)]['values'] ?? [];
+$params = $this->getVersionConfig()->getVal('claramente_option', []);
 
 // $params — готовые PHP-литералы из MigrationService::getTemplateParams() и выводятся как есть.
 // Значения от sprint.migration ($author, $description, $moduleVersion) приводятся к литералам тем же методом.

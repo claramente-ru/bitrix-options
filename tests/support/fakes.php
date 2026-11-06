@@ -135,6 +135,10 @@ namespace Bitrix\Main {
             self::$unregistered[] = $arguments;
         }
     }
+
+    class SystemException extends \Exception
+    {
+    }
 }
 
 namespace Bitrix\Main\Localization {

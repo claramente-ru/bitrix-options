@@ -39,6 +39,12 @@ if (! $isNewOption) {
     }
 }
 
+// Сообщение о результате действия, сохраненное перед редиректом, показывается один раз
+if (isset($_SESSION['CLARAMENTE_OPTIONS_MESSAGE'])) {
+    CAdminMessage::ShowMessage($_SESSION['CLARAMENTE_OPTIONS_MESSAGE']);
+    unset($_SESSION['CLARAMENTE_OPTIONS_MESSAGE']);
+}
+
 // Удаление и создание миграции выполняются только по ссылке с токеном сессии (защита от CSRF)
 $isActionRequest = $request->get('delete') === 'Y' || $request->get('migrate') === 'Y';
 $isActionAllowed = ! $isActionRequest || check_bitrix_sessid();
@@ -58,11 +64,14 @@ if ($isActionAllowed && $request->get('delete') === 'Y' && null !== $option) {
 
 // Действие: Миграция опции
 if ($isActionAllowed && $request->get('migrate') === 'Y' && is_numeric($request->get('ID'))) {
-    $optionService = new MigrationService();
-    $optionMigrate = $optionService->createMigration((int)$request->get('ID'));
-    if (! $optionMigrate) {
-        CAdminMessage::ShowMessage('Ошибка создания миграции');
+    try {
+        $version = (new MigrationService())->createMigration((int)$request->get('ID'));
+        $_SESSION['CLARAMENTE_OPTIONS_MESSAGE'] = ['MESSAGE' => 'Миграция ' . $version . ' создана', 'TYPE' => 'OK'];
+    } catch (Exception $e) {
+        $_SESSION['CLARAMENTE_OPTIONS_MESSAGE'] = ['MESSAGE' => 'Ошибка создания миграции. ' . $e->getMessage(), 'TYPE' => 'ERROR'];
     }
+    // Редирект без migrate=Y, чтобы обновление страницы не создавало миграцию повторно
+    LocalRedirect('/bitrix/admin/claramente_options.php?lang=' . LANG . '&page=option&ID=' . (int)$request->get('ID'));
 }
 
 // Страница редактирования

@@ -119,9 +119,12 @@ function renderMigration(array $option, ?TabEntityStructure $tab = null): array
                 {
                 }
 
-                public function getList(): array
+                // Как в sprint.migration 4.x: пустое значение заменяется значением по умолчанию
+                public function getVal(string $name, mixed $default = ''): mixed
                 {
-                    return [['values' => $this->params]];
+                    $values = ['claramente_option' => $this->params];
+
+                    return empty($values[$name]) ? $default : $values[$name];
                 }
             };
         }

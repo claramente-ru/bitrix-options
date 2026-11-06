@@ -50,14 +50,15 @@ final class MigrationService
     /**
      * Создать миграцию
      * @param int $optionId
-     * @return bool
+     * @return string имя созданной миграции
+     * @throws SystemException
      */
-    function createMigration(int $optionId): bool
+    function createMigration(int $optionId): string
     {
         // Заберем необработанную структурой информацию опции
         $option = ClaramenteOptionsTable::getById($optionId)->fetch();
         if (! $option) {
-            return false;
+            throw new SystemException('Опция не найдена');
         }
         // Возможно опция привязана к вкладке
         $tab = null;
@@ -66,14 +67,16 @@ final class MigrationService
         }
 
         // Соберем данные для миграции (готовые PHP-литералы для шаблона)
-        $configValues = $this->getTemplateParams($option, $tab);
-        $configValues['version_builders'] = $this->versionBuilders;
+        $configValues = [
+            'claramente_option' => $this->getTemplateParams($option, $tab),
+            'version_builders' => $this->versionBuilders,
+        ];
 
         $versionManager = new VersionManager(new VersionConfig('cfg', $configValues));
 
         // Ошибка. Нет директории для создания миграции
-        if (! $versionManager->getWebDir()) {
-            return false;
+        if (! $versionManager->getVersionConfig()->getVal('migration_dir')) {
+            throw new SystemException('Не найдена директория для миграций');
         }
 
         // Собственно создаем миграцию
@@ -86,7 +89,19 @@ final class MigrationService
             ]
         );
 
-        return $builder->buildExecute();
+        // sprint.migration 4.x сам выводит сообщения, чтобы они не дублировались, вывод отбрасывается
+        ob_start();
+        try {
+            $builder->buildExecute();
+        } finally {
+            ob_end_clean();
+        }
+
+        if (! $builder->getCreatedVersion()) {
+            throw new SystemException($builder->getErrorMessage() ?: 'Миграция не создана');
+        }
+
+        return $builder->getCreatedVersion();
     }
 
 

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Bitrix\Main\HttpRequest;
 use Claramente\Options\Entity\ClaramenteOptionsTable;
 use Claramente\Options\Entity\ClaramenteOptionTabsTable;
 use Claramente\Options\Services\MigrationService;
@@ -112,6 +113,16 @@ test('migrations: опция без вкладки и с пустыми знач
     assertSame(null, prop($migration, 'optionSiteId'), 'пустой сайт становится NULL');
 });
 
+test('migrations: нулевая сортировка и false переносятся на sprint.migration 4.x', function (): void {
+    $migration = renderMigration([
+        'TAB_ID' => null, 'NAME' => 'N', 'CODE' => 'c', 'TYPE' => 'string', 'SITE_ID' => '',
+        'VALUE' => '', 'SETTINGS' => null, 'SORT' => 0, 'SINGLE_VALUE_FOR_ALL_LANG' => 0,
+    ])['migration'];
+    assertSame(0, prop($migration, 'optionSort'), 'сортировка 0');
+    assertSame(false, prop($migration, 'optionSingleValueForAllLang'), 'false');
+    assertSame('', prop($migration, 'optionValue'), 'пустая строка');
+});
+
 test('migrations: up() создает опцию и вкладку', function (): void {
     ClaramenteOptionsTable::$options = [];
     ClaramenteOptionTabsTable::$tabs = [];
@@ -191,4 +202,20 @@ test('migrations: down() не удаляет вкладку, пока в ней 
     $migration->up();
     $migration->down();
     assertSame(null, ClaramenteOptionTabsTable::getByCode('tab_code'), 'пустая вкладка удалена');
+});
+
+test('migrations: после создания миграции редирект без migrate=Y, сообщение показывается один раз', function (): void {
+    ClaramenteOptionsTable::$options = [1 => fixture()];
+    CAdminMessage::$messages = [];
+    $_SESSION = [];
+    $request = new HttpRequest([], ['ID' => '1', 'migrate' => 'Y']);
+
+    $redirect = runAdminScript(__DIR__ . '/../../admin/pages/option.php', fakeUser(true), ['request' => $request]);
+    assertTrue(null !== $redirect && ! str_contains($redirect, 'migrate=Y'), 'редирект без migrate=Y');
+    assertTrue(isset($_SESSION['CLARAMENTE_OPTIONS_MESSAGE']), 'сообщение сохранено до редиректа');
+
+    $page = new HttpRequest([], ['ID' => '1']);
+    runAdminScript(__DIR__ . '/../../admin/pages/option.php', fakeUser(true), ['request' => $page]);
+    runAdminScript(__DIR__ . '/../../admin/pages/option.php', fakeUser(true), ['request' => $page]);
+    assertSame(1, count(array_filter(CAdminMessage::$messages, static fn($m) => str_contains($m, 'миграции'))), 'сообщение показано один раз');
 });
