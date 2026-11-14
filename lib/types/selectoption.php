@@ -41,17 +41,8 @@ class SelectOption extends AbstractOption
         OptionEntityStructure $option
     ): void
     {
-        $values = [
-            null => 'Не установлено'
-        ];
-        $settings = is_string($option->settings) ? unserialize($option->settings) : null;
-        if (
-            $settings
-            && ! empty($settings['values'])
-            && is_array($settings['values'])
-        ) {
-            $values = array_merge($values, $settings['values']);
-        }
+        // Объединение без перенумерации: ключ элемента списка и есть сохраненное значение
+        $values = ['' => 'Не установлено'] + $this->getListValues($option);
 
         $form->AddDropDownField(
             id: $this->getPostOptionId($postName, $option),
@@ -60,6 +51,26 @@ class SelectOption extends AbstractOption
             arSelect: $values,
             value: $option->value
         );
+    }
+
+    /**
+     * Элементы списка: ключ => название.
+     * Старые настройки (без признака stable_keys) нумеровались по порядку, поэтому
+     * для них ключи приводятся к 0..n-1 так же, как раньше при выводе списка
+     * @param OptionEntityStructure $option
+     * @return array
+     */
+    public function getListValues(OptionEntityStructure $option): array
+    {
+        $settings = $this->getSettings($option);
+        $values = is_array($settings['values'] ?? null) ? $settings['values'] : [];
+        $values = array_filter($values, static fn($value): bool => is_scalar($value) && trim((string)$value) !== '');
+        if (empty($settings['stable_keys'])) {
+            return array_values($values);
+        }
+        ksort($values);
+
+        return $values;
     }
 
     /**
@@ -90,9 +101,18 @@ class SelectOption extends AbstractOption
     public function beforeSaveSettings(HttpRequest $request, OptionEntityStructure $option): ?string
     {
         $values = $request->getPost('option')['settings']['values'] ?? [];
+        $values = is_array($values) ? $values : [];
+        $result = [];
+        foreach ($values as $key => $value) {
+            // Ключи сохраняются: удаление элемента из середины не сдвигает значения других элементов
+            if (is_numeric($key) && is_scalar($value) && trim((string)$value) !== '') {
+                $result[(int)$key] = (string)$value;
+            }
+        }
 
         return serialize([
-            'values' => array_filter($values)
+            'values' => $result,
+            'stable_keys' => true,
         ]);
     }
 
@@ -111,12 +131,9 @@ class SelectOption extends AbstractOption
     {
         $selectIndex = 0;
         $form->AddSection('option-settings', 'Настройки свойства');
-        $settings = unserialize($option->settings ?: '');
-        if ($settings && ! empty($settings['values'])) {
-            foreach ($settings['values'] as $value) {
-                $form->AddEditField('option[settings][values][' . $selectIndex . ']', '📑 Элемент списка', false, [], $value);
-                $selectIndex++;
-            }
+        foreach ($this->getListValues($option) as $key => $value) {
+            $form->AddEditField('option[settings][values][' . (int)$key . ']', '📑 Элемент списка', false, [], $value);
+            $selectIndex = max($selectIndex, (int)$key + 1);
         }
         $form->AddEditField('option[settings][values][' . $selectIndex . ']', '📑 Элемент списка', false);
         $form->BeginCustomField('option-add', 'test test');

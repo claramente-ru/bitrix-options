@@ -5,6 +5,7 @@ namespace Claramente\Options\Types;
 
 use Bitrix\Main\HttpRequest;
 use Bitrix\Main\Localization\LanguageTable;
+use Claramente\Options\Helpers\HtmlHelper;
 use Claramente\Options\Helpers\LangHelper;
 use Claramente\Options\Helpers\SiteHelper;
 use Claramente\Options\Structures\Entity\OptionEntityStructure;
@@ -15,6 +16,11 @@ use CAdminForm;
  */
 abstract class AbstractOption
 {
+    /**
+     * Максимальная длина подсказки в символах
+     */
+    public const HINT_MAX_LENGTH = 2000;
+
     /**
      * Название свойства
      * @return string
@@ -106,11 +112,15 @@ abstract class AbstractOption
 
         if ($multiple) {
             // Для множественных свойств (отдельное значение для каждого языка) сериализуем данные
+            if (! is_array($value)) {
+                return null;
+            }
             $seenLangs = [];
             foreach ($value as $key => $optionItem) {
                 // Удаляем пустые значения
                 if ($optionItem['value'] === '') {
                     unset($value[$key]);
+                    continue;
                 }
                 // Удаляем значение, если задано больше одного значения для языка
                 if (in_array($optionItem['lang'], $seenLangs)) {
@@ -125,6 +135,75 @@ abstract class AbstractOption
             return serialize($value);
         }
 
+        return null;
+    }
+
+    /**
+     * Безопасный HTML в значении из формы или кода: одно значение или значения по языкам
+     * @param mixed $value
+     * @param bool $multiple
+     * @return mixed
+     */
+    protected function sanitizeValue(mixed $value, bool $multiple): mixed
+    {
+        if (is_string($value)) {
+            return HtmlHelper::sanitize($value);
+        }
+        if (! is_array($value)) {
+            return $value;
+        }
+        $items = $multiple ? $value : [$value];
+        foreach ($items as &$item) {
+            if (is_array($item) && is_string($item['value'] ?? null)) {
+                $item['value'] = HtmlHelper::sanitize($item['value']);
+            }
+        }
+
+        return $multiple ? $items : $items[0];
+    }
+
+    /**
+     * Действия после успешного удаления опции: удаление связанных с ней данных, например файлов.
+     * Вызывается только если опция удалена, чтобы при ошибке удаления опция не ссылалась на удаленные данные.
+     * По умолчанию ничего не делает; переопределяется в типах, которые хранят данные вне таблицы опций
+     * (@see FileOption::onAfterDelete()), в том числе в пользовательских наследниках
+     * @param OptionEntityStructure $option Удаленная опция со значениями всех языков
+     * @return void
+     */
+    public function onAfterDelete(OptionEntityStructure $option): void
+    {
+    }
+
+    /**
+     * Серверная проверка значения перед сохранением (форма и @see cm_option_set())
+     * По умолчанию любое значение допустимо
+     * @param OptionEntityStructure $option
+     * @param mixed $value Значение в том же виде, что и для @see self::getValueBeforeSave()
+     * @param bool $multiple Отдельные значения для каждого языка
+     * @return string|null Текст ошибки или null, если значение допустимо
+     */
+    public function validateValue(OptionEntityStructure $option, mixed $value, bool $multiple = false): ?string
+    {
+        return null;
+    }
+
+    /**
+     * Проверка сохраненного значения при изменении типа или настроек опции
+     * @param OptionEntityStructure $option Опция с новыми типом и настройками и текущим значением
+     * @return string|null Текст ошибки или null
+     */
+    public function validateStoredValue(OptionEntityStructure $option): ?string
+    {
+        return null;
+    }
+
+    /**
+     * Проверка дополнительных настроек типа перед сохранением параметра
+     * @param HttpRequest $request
+     * @return string|null Текст ошибки или null
+     */
+    public function validateSettings(HttpRequest $request): ?string
+    {
         return null;
     }
 
@@ -146,6 +225,39 @@ abstract class AbstractOption
             content: trim($option->name . ' ' . $option->siteId),
             required: false,
             value: $option->value
+        );
+    }
+
+    /**
+     * Подсказка к полю, общая для всех типов и языков.
+     * Строка формы получает id с префиксом hint_, чтобы скрипт ссылок редактирования
+     * (tr[id^='tr_options']) не принимал ее за поле значения.
+     * @param string $postName
+     * @param CAdminForm $form
+     * @param OptionEntityStructure $option
+     * @return void
+     */
+    public function getFormFieldHint(
+        string $postName,
+        CAdminForm &$form,
+        OptionEntityStructure $option
+    ): void {
+        $hint = $option->getHint();
+        if ($hint === '') {
+            return;
+        }
+
+        $form->AddViewField(
+            'hint_' . $postName,
+            '',
+            sprintf(
+                '<p class="adm-info-message">%s</p>',
+                nl2br(htmlspecialcharsbx(
+                    $hint,
+                    ENT_QUOTES | ENT_SUBSTITUTE,
+                    false
+                ))
+            )
         );
     }
 
@@ -251,9 +363,12 @@ abstract class AbstractOption
      */
     public function getSettings(OptionEntityStructure $option): array
     {
-        $settings = unserialize($option->settings ?: '');
+        if (! is_string($option->settings) || $option->settings === '') {
+            return [];
+        }
+        $settings = unserialize($option->settings, ['allowed_classes' => false]);
 
-        return $settings ?: [];
+        return is_array($settings) ? $settings : [];
     }
 
     /**
@@ -280,7 +395,7 @@ abstract class AbstractOption
     protected function getFieldHeader(OptionEntityStructure $option): string
     {
         return '<tr id="tr_options[' . $option->id . '][value]">
-    <td class="adm-detail-content-cell-l">' . $this->getOptionLabel($option) . '</td>
+    <td class="adm-detail-content-cell-l">' . htmlspecialcharsbx($this->getOptionLabel($option)) . '</td>
     <td class="adm-detail-content-cell-r">';
     }
 

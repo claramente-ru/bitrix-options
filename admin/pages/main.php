@@ -10,20 +10,30 @@ use Claramente\Options\Types\StringOption;
  * @var CUser $USER
  */
 
-// Сохранение формы
+// Сохранение формы. Значения, не прошедшие проверку: id опции => введенное значение
+$failedOptionValues = [];
 if ($request->isPost()) {
     require_once __DIR__ . '/../save/main.php';
 }
 
 // Главная страница модуля
 $form = new AdminForm();
-$tabControl = $form->getForm('claramente_options_form', $form->getFormTabs());
+// Вкладка настройки вкладок доступна только администраторам
+$formTabs = array_values(array_filter(
+    $form->getFormTabs(),
+    static fn(array $formTab): bool => 'tabs' !== $formTab['DIV'] || $USER->IsAdmin()
+));
+$tabControl = $form->getForm('claramente_options_form', $formTabs);
 $tabControl->SetShowSettings(false);
+// Защита от CSRF: токен сессии проверяется при сохранении
+$tabControl->BeginEpilogContent();
+echo bitrix_sessid_post();
+$tabControl->EndEpilogContent();
 $tabControl->Begin([
     'FORM_ACTION' => $request->getRequestUri()
 ]);
 // Проходимся по всем tabs
-foreach ($form->getFormTabs() as $formTab) {
+foreach ($formTabs as $formTab) {
     $tabControl->BeginNextFormTab();
 
     // Вкладка - Параметры (содержит опции которые не привязаны к вкладкам)
@@ -39,6 +49,22 @@ foreach ($form->getFormTabs() as $formTab) {
             $optionType = $option->getOptionType();
             if (null === $optionType) {
                 $optionType = new StringOption();
+            }
+
+            // Значение не прошло проверку: показываем введенные данные
+            if (array_key_exists($option->id, $failedOptionValues)) {
+                $failedValue = $failedOptionValues[$option->id];
+                if ($option->singleValueForAllLang) {
+                    $failedValue = is_array($failedValue) ? ($failedValue['value'] ?? null) : $failedValue;
+                    if (is_scalar($failedValue)) {
+                        $option->value = (string)$failedValue;
+                    }
+                } elseif (is_array($failedValue)) {
+                    $option->value = serialize(array_values(array_filter(
+                        $failedValue,
+                        static fn($item): bool => is_array($item) && is_scalar($item['value'] ?? null)
+                    )));
+                }
             }
 
             // Форма редактирования опции
@@ -58,6 +84,11 @@ foreach ($form->getFormTabs() as $formTab) {
                     $option
                 );
             }
+            $optionType->getFormFieldHint(
+                $optionId,
+                $tabControl,
+                $option
+            );
         }
     }
 
@@ -128,8 +159,8 @@ $tabControl->Buttons(
 $tabControl->Show();
 include_once __DIR__ . '/../include/info.php';
 ?>
-<?php if ($USER->IsAdmin()) { ?>
 <script>
+<?php if ($USER->IsAdmin()) { ?>
     document.addEventListener("DOMContentLoaded", function () {
         // Редактирование опций доступно только администраторам
         document.querySelectorAll("tr[id^='tr_options']").forEach(function (input) {
@@ -147,7 +178,9 @@ include_once __DIR__ . '/../include/info.php';
             tdName.append(editLink);
         });
     });
+<?php } ?>
 
+    // Добавление строки значения для языка (доступно всем пользователям модуля)
     function addOptionRow(tableId, regexp) {
         let table = document.getElementById(tableId)
         if (! table) return;
@@ -227,4 +260,3 @@ include_once __DIR__ . '/../include/info.php';
 
     }
 </script>
-<?php } ?>

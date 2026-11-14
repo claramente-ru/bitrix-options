@@ -9,6 +9,6 @@ $eventManager->unRegisterEventHandler(
     'main',
     'OnBuildGlobalMenu',
     $moduleId,
-    '\Claramente\EventHandlers\HighloadBlock',
-    'OnBuildGlobalMenu'
+    'ClaramenteModuleAdminOptions',
+    'onBuildGlobalMenu'
 );

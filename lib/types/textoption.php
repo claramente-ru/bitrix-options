@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Claramente\Options\Types;
 
 use CAdminForm;
+use Claramente\Options\Helpers\HtmlHelper;
 use Claramente\Options\Structures\Entity\OptionEntityStructure;
 
 /**
@@ -28,6 +29,22 @@ class TextOption extends AbstractOption
     }
 
     /**
+     * В значении сохраняется только безопасный HTML
+     * @param OptionEntityStructure $option
+     * @param mixed $value
+     * @param bool $multiple
+     * @return string|null
+     */
+    public function getValueBeforeSave(
+        OptionEntityStructure $option,
+        mixed                 $value,
+        bool                  $multiple = false,
+    ): ?string
+    {
+        return parent::getValueBeforeSave($option, $this->sanitizeValue($value, $multiple), $multiple);
+    }
+
+    /**
      * @param string $postName
      * @param CAdminForm $form
      * @param OptionEntityStructure $option
@@ -42,7 +59,7 @@ class TextOption extends AbstractOption
         $form->AddTextField(
             id: $this->getPostOptionId($postName, $option),
             label: $this->getOptionLabel($option),
-            value: $option->value,
+            value: htmlspecialchars((string)HtmlHelper::decodeForForm($option->value), ENT_COMPAT | ENT_SUBSTITUTE, 'UTF-8'),
             arParams: [
                 'cols' => 60,
                 'rows' => 10
@@ -125,7 +142,8 @@ class TextOption extends AbstractOption
      */
     protected function getFieldText(string $name, ?string $value): string
     {
-        $value = is_string($value) ? htmlspecialcharsbx(htmlspecialcharsback($value)) : null;
+        // Без htmlspecialcharsback: введенные текстом сущности (&amp;, &lt;) сохраняются без изменений
+        $value = is_string($value) ? htmlspecialcharsbx(HtmlHelper::decodeForForm($value)) : null;
 
         return '<textarea name="' . $name . '" cols="60" rows="10">' . $value . '</textarea>';
     }

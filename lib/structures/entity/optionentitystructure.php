@@ -14,6 +14,12 @@ use Claramente\Options\Services\OptionTypes;
 final class OptionEntityStructure
 {
     /**
+     * Ошибка последнего сохранения значения
+     * @var string|null
+     */
+    private ?string $lastError = null;
+
+    /**
      * @param int $id
      * @param string $name
      * @param string $code
@@ -71,24 +77,103 @@ final class OptionEntityStructure
     }
 
     /**
+     * Пустая структура для новой опции
+     * @return self
+     */
+    public static function empty(): self
+    {
+        return new self(
+            id: 0,
+            name: '',
+            code: '',
+            value: null,
+            type: 'string',
+            settings: null,
+            sort: 100,
+            tabId: null,
+            siteId: null,
+            singleValueForAllLang: true,
+            isAdminOnly: false,
+            createdAt: new DateTime(),
+            updatedAt: new DateTime()
+        );
+    }
+
+    /**
      * Установка нового значения
+     * Значение предварительно проверяется типом опции (@see AbstractOption::validateValue())
+     * При ошибке значение не сохраняется, текст ошибки доступен через @see self::getLastError()
      * @param mixed $value
      * @return bool
      */
     public function setValue(mixed $value): bool
     {
+        $this->lastError = null;
+        $optionType = $this->getOptionType();
+        if (null === $optionType) {
+            $this->lastError = sprintf('Ошибка конфигурации: тип данных %s опции %s не найден', $this->type, $this->code);
+            return false;
+        }
+
+        $multiple = ! $this->singleValueForAllLang;
+        // Для отдельных значений по языкам ожидается массив [['value' => ..., 'lang' => ...], ...]
+        if ($multiple && ! is_array($value) && null !== $value) {
+            $this->lastError = sprintf(
+                'Ошибка вызова: опция %s хранит значения по языкам, ожидается массив [[\'value\' => ..., \'lang\' => ...]], передан %s',
+                $this->code,
+                get_debug_type($value)
+            );
+            return false;
+        }
+
+        $error = $optionType->validateValue($this, $value, $multiple);
+        if (null !== $error) {
+            $this->lastError = $error;
+            return false;
+        }
+
         $update = ClaramenteOptionsTable::update(
             $this->id,
             [
-                'value' => $this->getOptionType()->getValueBeforeSave(
+                'value' => $optionType->getValueBeforeSave(
                     option: $this,
                     value: $value,
-                    multiple: ! $this->singleValueForAllLang
+                    multiple: $multiple
                 ),
+                // В PostgreSQL нет ON UPDATE CURRENT_TIMESTAMP, поэтому время изменения задается явно
+                'UPDATED_AT' => new DateTime(),
             ]
         );
+        ClaramenteOptionsTable::clearPreloader();
+
+        if (! $update->isSuccess()) {
+            $this->lastError = implode(', ', $update->getErrorMessages());
+        }
 
         return $update->isSuccess();
+    }
+
+    /**
+     * Текст ошибки последнего вызова @see self::setValue()
+     * @return string|null
+     */
+    public function getLastError(): ?string
+    {
+        return $this->lastError;
+    }
+
+    /**
+     * Текст подсказки к параметру из SETTINGS. Пустая строка, если подсказки нет
+     * @return string
+     */
+    public function getHint(): string
+    {
+        $settings = is_string($this->settings) && $this->settings !== ''
+            ? @unserialize($this->settings, ['allowed_classes' => false])
+            : [];
+        $hint = is_array($settings) ? ($settings['hint'] ?? null) : null;
+
+        return is_string($hint) && trim($hint) !== '' ? $hint : '';
     }
 
     /**
@@ -115,7 +200,7 @@ final class OptionEntityStructure
      */
     public function getValuesForLangs(): array
     {
-        return $this->getOptionType()?->getValuesForLangs($this);
+        return $this->getOptionType()?->getValuesForLangs($this) ?? [];
     }
 
     /**

@@ -24,8 +24,13 @@ class RequestAddRowValidator extends AbstractRequestValidator
             throw new Exception('Неизвестный тип данных опции: ' . $this->fields['option_type']);
         }
 
-        if (empty($this->fields['id'])) {
+        if (empty($this->fields['id']) || ! is_string($this->fields['id'])) {
             throw new Exception('Не передан id для опции');
+        }
+
+        // id подставляется в атрибут name: допускаем только имена вида options[12][3]
+        if (! preg_match('/^options\[\d+\]\[\d+\]$/', $this->fields['id'])) {
+            throw new Exception('Некорректный id для опции');
         }
 
 

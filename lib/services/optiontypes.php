@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Claramente\Options\Services;
 
 use Claramente\Options\Types\AbstractOption;
+use ReflectionClass;
 
 /**
  * Типы данных настроек модуля claramente.options
@@ -17,6 +18,7 @@ final class OptionTypes
     public static array $defaultTypes = [
         'string' => 'Claramente\Options\Types\StringOption',
         'strings' => 'Claramente\Options\Types\StringsOption',
+        'number' => 'Claramente\Options\Types\NumberOption',
         'bool' => 'Claramente\Options\Types\BoolOption',
         'date' => 'Claramente\Options\Types\DateOption',
         'select' => 'Claramente\Options\Types\SelectOption',
@@ -45,7 +47,9 @@ final class OptionTypes
             $types[$code] = $class;
         }
         foreach (get_declared_classes() as $class) {
-            if (is_subclass_of($class, AbstractOption::class)) {
+            // Абстрактные промежуточные наследники не являются типами данных: у них нельзя создать объект,
+            // а унаследованный getCode() подменил бы тип родителя
+            if (is_subclass_of($class, AbstractOption::class) && ! (new ReflectionClass($class))->isAbstract()) {
                 $types[$class::getCode()] = $class;
             }
         }

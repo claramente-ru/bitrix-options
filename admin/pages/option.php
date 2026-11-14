@@ -5,6 +5,7 @@ use Claramente\Options\Admin\AdminForm;
 use Claramente\Options\Entity\ClaramenteOptionsTable;
 use Claramente\Options\Services\MigrationService;
 use Claramente\Options\Services\OptionTypes;
+use Claramente\Options\Types\AbstractOption;
 use Sprint\Migration\VersionManager;
 
 /**
@@ -38,19 +39,39 @@ if (! $isNewOption) {
     }
 }
 
-// Действие: Удаление опции
-if ($request->get('delete') === 'Y' && is_numeric($request->get('ID'))) {
-    ClaramenteOptionsTable::delete((int)$request->get('ID'));
-    LocalRedirect('/bitrix/admin/claramente_options.php?lang=' . LANG);
+// Сообщение о результате действия, сохраненное перед редиректом, показывается один раз
+if (isset($_SESSION['CLARAMENTE_OPTIONS_MESSAGE'])) {
+    CAdminMessage::ShowMessage($_SESSION['CLARAMENTE_OPTIONS_MESSAGE']);
+    unset($_SESSION['CLARAMENTE_OPTIONS_MESSAGE']);
+}
+
+// Удаление и создание миграции выполняются только по ссылке с токеном сессии (защита от CSRF)
+$isActionRequest = $request->get('delete') === 'Y' || $request->get('migrate') === 'Y';
+$isActionAllowed = ! $isActionRequest || check_bitrix_sessid();
+if (! $isActionAllowed) {
+    CAdminMessage::ShowMessage('Ошибка. Сессия истекла, обновите страницу и повторите действие');
+}
+
+// Действие: Удаление опции (вместе со связанными данными типа, например файлами)
+if ($isActionAllowed && $request->get('delete') === 'Y' && null !== $option) {
+    $delete = ClaramenteOptionsTable::delete($option->id);
+    if ($delete->isSuccess()) {
+        $option->getOptionType()?->onAfterDelete($option);
+        LocalRedirect('/bitrix/admin/claramente_options.php?lang=' . LANG);
+    }
+    CAdminMessage::ShowMessage('Ошибка удаления. ' . implode(',', $delete->getErrorMessages()));
 }
 
 // Действие: Миграция опции
-if ($request->get('migrate') === 'Y' && is_numeric($request->get('ID'))) {
-    $optionService = new MigrationService();
-    $optionMigrate = $optionService->createMigration((int)$request->get('ID'));
-    if (! $optionMigrate) {
-        CAdminMessage::ShowMessage('Ошибка создания миграции');
+if ($isActionAllowed && $request->get('migrate') === 'Y' && is_numeric($request->get('ID'))) {
+    try {
+        $version = (new MigrationService())->createMigration((int)$request->get('ID'));
+        $_SESSION['CLARAMENTE_OPTIONS_MESSAGE'] = ['MESSAGE' => 'Миграция ' . $version . ' создана', 'TYPE' => 'OK'];
+    } catch (Exception $e) {
+        $_SESSION['CLARAMENTE_OPTIONS_MESSAGE'] = ['MESSAGE' => 'Ошибка создания миграции. ' . $e->getMessage(), 'TYPE' => 'ERROR'];
     }
+    // Редирект без migrate=Y, чтобы обновление страницы не создавало миграцию повторно
+    LocalRedirect('/bitrix/admin/claramente_options.php?lang=' . LANG . '&page=option&ID=' . (int)$request->get('ID'));
 }
 
 // Страница редактирования
@@ -64,6 +85,10 @@ $tabControl = $form->getForm(
     denyAutosave: true
 );
 $tabControl->SetShowSettings(false);
+// Защита от CSRF: токен сессии проверяется при сохранении
+$tabControl->BeginEpilogContent();
+echo bitrix_sessid_post();
+$tabControl->EndEpilogContent();
 $tabControl->Begin([
     'FORM_ACTION' => $request->getRequestUri()
 ]);
@@ -89,6 +114,18 @@ $tabControl->AddCheckBoxField(
 );
 $tabControl->AddCheckBoxField('option[is_admin_only]', '🔒 Доступен только администраторам', false, ['Y', 'N'], $option?->isAdminOnly);
 
+// Общая подсказка не зависит от реализации настроек конкретного типа.
+$hint = $option?->getHint() ?? '';
+$tabControl->AddTextField(
+    'option[hint]',
+    sprintf('💡 Подсказка (текст без HTML, до %d символов)', AbstractOption::HINT_MAX_LENGTH),
+    htmlspecialchars($hint, ENT_COMPAT | ENT_SUBSTITUTE, 'UTF-8'),
+    [
+        'cols' => 60,
+        'rows' => 4,
+    ]
+);
+
 // Настройки типа данных
 if (! $isNewOption) {
     $optionType = $option->getOptionType();
@@ -105,15 +142,15 @@ $buttonDelete = '';
 if (! $isNewOption) {
     $text = 'Удалить опцию? Это действие нельзя будет отменить';
     $buttonDelete = '
-    <a href="/bitrix/admin/claramente_options.php?lang=' . LANG . '&page=option&ID=' . $option->id . '&delete=Y" onclick="return confirm(\'' . $text. '\')">
+    <a href="/bitrix/admin/claramente_options.php?lang=' . LANG . '&page=option&ID=' . $option->id . '&delete=Y&' . bitrix_sessid_get() . '" onclick="return confirm(\'' . $text. '\')">
 <input type="button" class="adm-btn" value="🗑️ Удалить">
 </a>';
 }
-// Кнопка "Создать миграцию"
+// Кнопка "Создать миграцию" (только для сохраненной опции)
 $buttonMigration = '';
-if ($migrationModuleEnabled) {
+if ($migrationModuleEnabled && ! $isNewOption) {
     $text = 'Создать миграцию в модуле sprint.migration? Значение опции будет перенесено вместе с миграцией';
-    $buttonMigration = '<a href="/bitrix/admin/claramente_options.php?lang=' . LANG . '&page=option&ID=' . $option->id . '&migrate=Y" onclick="return confirm(\'' . $text. '\')">
+    $buttonMigration = '<a href="/bitrix/admin/claramente_options.php?lang=' . LANG . '&page=option&ID=' . $option->id . '&migrate=Y&' . bitrix_sessid_get() . '" onclick="return confirm(\'' . $text. '\')">
 <input type="button" class="adm-btn" value="💾️ Создать миграцию">
 </a>';
 }

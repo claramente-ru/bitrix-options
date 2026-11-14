@@ -29,6 +29,30 @@ class FileOption extends AbstractOption
     }
 
     /**
+     * Удаление файлов после удаления опции: одного файла или файлов всех языков
+     * @param OptionEntityStructure $option
+     * @return void
+     */
+    public function onAfterDelete(OptionEntityStructure $option): void
+    {
+        if (! $option->value) {
+            return;
+        }
+        if ($option->singleValueForAllLang) {
+            if (is_numeric($option->value)) {
+                CFile::Delete((int)$option->value);
+            }
+            return;
+        }
+        $values = @unserialize($option->value, ['allowed_classes' => false]);
+        foreach (is_array($values) ? $values : [] as $item) {
+            if (is_array($item) && is_numeric($item['value'] ?? null)) {
+                CFile::Delete((int)$item['value']);
+            }
+        }
+    }
+
+    /**
      * Преобразование данных перед сохранением в БД.
      * Null если нужно удалить или
      * @param OptionEntityStructure $option
@@ -250,7 +274,7 @@ class FileOption extends AbstractOption
         $html = CFile::InputFile($name, 20, $value, bShowNotes: false);
         if ($value) {
             $file = CFile::GetFileArray($value);
-            $isImage = $file && (CFile::IsImage($file['SRC']) || str_contains($file['CONTENT_TYPE'], 'image'));
+            $isImage = $file && (CFile::IsImage($file['SRC']) || str_contains((string)($file['CONTENT_TYPE'] ?? ''), 'image'));
             $showFile = $isImage === true ? CFile::ShowImage($value, 150, 150, "border=0", "", true) : CFile::ShowFile($value, 150, 150, "border=0", "", true);
             $html .= '<div class="adm-detail-file-image">' . $showFile . "</div>";
 

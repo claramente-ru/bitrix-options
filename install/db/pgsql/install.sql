@@ -1,4 +1,4 @@
--- Сущность options
+-- Сущность tabs
 CREATE TABLE IF NOT EXISTS claramente_option_tabs (
     ID SERIAL PRIMARY KEY,
     NAME VARCHAR(255) NOT NULL,
@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS claramente_option_tabs (
     CONSTRAINT CODE_UNIQUE UNIQUE (CODE)
 );
 
--- Сущность tabs
+-- Сущность options
 CREATE TABLE IF NOT EXISTS claramente_options (
     ID SERIAL PRIMARY KEY,
     NAME VARCHAR(255) NOT NULL,
@@ -23,7 +23,6 @@ CREATE TABLE IF NOT EXISTS claramente_options (
     CREATED_AT TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UPDATED_AT TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT CODE_SITE_ID_UNIQUE UNIQUE (CODE, SITE_ID),
-    CONSTRAINT CODE_FK FOREIGN KEY (CODE) REFERENCES claramente_option_tabs(CODE),
     CONSTRAINT TAB_ID_FK FOREIGN KEY (TAB_ID) REFERENCES claramente_option_tabs(ID) ON DELETE SET NULL
     );
 
@@ -32,3 +31,6 @@ ALTER TABLE claramente_options ADD COLUMN IF NOT EXISTS IS_ADMIN_ONLY SMALLINT N
 
 --  Обновление 1.0.2 от 2026-01-27
 ALTER TABLE claramente_options ADD COLUMN IF NOT EXISTS SINGLE_VALUE_FOR_ALL_LANG SMALLINT NOT NULL DEFAULT 1;
+
+--  Обновление 2.0.0: ошибочный внешний ключ CODE -> claramente_option_tabs(CODE) не позволял создавать опции
+ALTER TABLE claramente_options DROP CONSTRAINT IF EXISTS code_fk;
